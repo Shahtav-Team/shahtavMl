@@ -150,7 +150,7 @@ class WavToMidiModel:
         train_dataset_epoch_steps = train_dataset.cardinality().numpy()
 
         # load all the valid dataset into an array, so it works with the train API
-        valid_data \
+        valid_data = valid_data \
             .map(lambda x: utils.sparse_to_dense(x, maestroLoader.sparse_keys)) \
             .map(lambda x:
                  (

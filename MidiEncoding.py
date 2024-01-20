@@ -90,7 +90,7 @@ class MidiEncoding:
         offsets = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
         velocities = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
 
-        for note in midi.instruments[0]:
+        for note in midi.instruments[0].notes:
             pitch = note.pitch
             start = round(note.start / frame_length_seconds)
             end = round(note.end / frame_length_seconds)

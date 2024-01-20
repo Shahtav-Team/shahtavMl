@@ -1,0 +1,16 @@
+mido
+pretty_midi
+music21
+cython
+madmom
+numpy~=1.26.3
+tensorflow~=2.15.0
+keras~=2.15.0
+tqdm~=4.66.1
+librosa~=0.10.1
+pandas~=1.5.3
+
+matplotlib~=3.8.2
+jinja2==3.0
+bokeh==2.1.0
+visual_midi

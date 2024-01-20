@@ -154,7 +154,7 @@ class WavToMidiModel:
             .map(lambda x: utils.sparse_to_dense(x, maestroLoader.sparse_keys)) \
             .map(lambda x:
                  (
-                     {"spectogram": x["spectogram"]},
+                     {"spectrogram": x["spectrogram"]},
                      {
                          "frames": x["frames"],
                          "onsets": x["onsets"],

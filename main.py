@@ -1,4 +1,7 @@
+import pretty_midi
+
 from WavToMidiModel import WavToMidiModel
+from MidiEncoding import MidiEncoding
 import librosa
 def infer():
     model_path = "models/onsets_offset_modelv1"
@@ -12,5 +15,9 @@ def infer():
     midi = result.to_pretty_midi()
     midi.write("samples/test.mid")
 
+
 if __name__ == "__main__":
-    infer()
+    midi_file = pretty_midi.PrettyMIDI("samples/test.mid")
+    extended_midi = MidiEncoding.extend_with_sustain(midi_file)
+
+    extended_midi.write("samples/test_output.mid")

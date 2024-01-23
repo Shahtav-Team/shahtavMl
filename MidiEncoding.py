@@ -1,3 +1,5 @@
+import copy
+import itertools
 from typing import List
 import pretty_midi
 from matplotlib import pyplot as plt
@@ -7,6 +9,8 @@ from dataclasses import dataclass
 import librosa
 
 import config
+
+SUSTAIN_NO = 64
 
 
 def notes_to_pretty_midi(notes: List[pretty_midi.Note], bpm=120) -> PrettyMIDI:
@@ -90,6 +94,8 @@ class MidiEncoding:
         offsets = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
         velocities = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
 
+        sustain_events = MidiEncoding.get_sustain_events(midi)
+
         for note in midi.instruments[0].notes:
             pitch = note.pitch
             start = round(note.start / frame_length_seconds)
@@ -105,6 +111,77 @@ class MidiEncoding:
             frames=frames,
             frame_length_seconds=frame_length_seconds
         )
+
+    @staticmethod
+    def get_sustain_events(midi: PrettyMIDI):
+        """
+        Return a list of sustain events
+        midi: a PrettyMidi object which we want to get the sustain event from
+        returns a list of objects containing start and end times
+        """
+        sustain_events = []
+
+        current_sustain = None
+
+        for control_change in sorted(midi.instruments[0].control_changes, key=lambda x: x.time):
+            if control_change.number == SUSTAIN_NO:
+                if control_change.value >= 64 and current_sustain is None:
+                    current_sustain = {"start": control_change.time}
+                elif control_change.value < 64 and current_sustain is not None:
+                    current_sustain["end"] = control_change.time
+                    sustain_events.append(current_sustain)
+                    current_sustain = None
+
+        if current_sustain is not None:
+            current_sustain["end"] = midi.get_end_time()
+            sustain_events.append(current_sustain)
+
+        return sustain_events
+
+    @staticmethod
+    def extend_with_sustain(midi: PrettyMIDI):
+        """
+        Gets a pretty midi object
+        Args:
+            midi: A PrettyMIDI object, that we want to expand the notes of
+
+        Returns:
+            A modified version of the PrettyMIDI object, where notes are expanded
+            using the sustain pedal
+        """
+        midi_copy = copy.deepcopy(midi)
+
+        # create a bin for each possible pitch
+        note_bins = [[] for _ in range(128)]
+
+        # add the notes to the correct bins
+        for note in midi_copy.instruments[0].notes:
+            note_bins[note.pitch].append(note)
+
+        # get the sustain events
+        sustain_events = MidiEncoding.get_sustain_events(midi_copy)
+
+        # lengthen the notes based on the sustain
+        for note_bin in note_bins:
+            # find the last sustain event played during the note
+            for i, note in enumerate(note_bin):
+                sustain_end = list(filter(
+                    lambda x: x["start"] <= note.end <= x["end"],
+                    sustain_events)
+                    )
+                if len(sustain_end) > 0:
+                    note.end = sustain_end[0]["end"]
+
+                # check a new note starts before the end
+                if i + 1 < len(note_bin)  and note.end >= note_bin[i + 1].start:
+                    note.end = note_bin[i].start
+        midi_copy.instruments[0].notes = list(itertools.chain.from_iterable(note_bins))
+
+
+        midi_copy.instruments[0].control_changes = []
+
+        return midi_copy
+
 
     def to_pretty_midi(self, thresholds: Thresholds = None) -> pretty_midi.PrettyMIDI:
         if thresholds is None:

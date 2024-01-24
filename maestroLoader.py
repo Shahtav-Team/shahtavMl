@@ -55,8 +55,9 @@ def load_song(midi_file, audio_file):
     midi = pretty_midi.PrettyMIDI(midi_file)
     midi_encoding = MidiEncoding.from_pretty_midi(midi, config.frame_length_seconds)
 
-    # crop the empty end of the spectrogram to make it the same shape as the midi
+    # crop the spectrogram and midi encoding to be the same length
     spectrogram = spectrogram[: midi_encoding.length_frames()]
+    midi_encoding.cop_to_length(len(spectrogram))
     assert len(spectrogram) == midi_encoding.length_frames()
 
     return dict(

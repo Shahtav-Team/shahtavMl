@@ -229,6 +229,14 @@ class MidiEncoding:
     def length_frames(self):
         return self.frames.shape[0]
 
+    def cop_to_length(self, length):
+        if length < self.length_frames():
+            self.onsets = self.onsets[:length]
+            self.offsets = self.offsets[:length]
+            self.frames = self.frames[:length]
+            self.velocities = self.velocities[:length]
+
+
     @staticmethod
     def from_dict(dict, frame_length_seconds):
         """

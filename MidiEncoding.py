@@ -95,7 +95,7 @@ class MidiEncoding:
         offsets = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
         velocities = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
 
-        sustain_events = MidiEncoding.get_sustain_events(midi)
+        midi = MidiEncoding.extend_with_sustain(midi)
 
         for note in midi.instruments[0].notes:
             pitch = note.pitch
@@ -175,10 +175,11 @@ class MidiEncoding:
                     note.end = sustain_end[0]["end"]
 
                 # check a new note starts before the end
-                if i + 1 < len(note_bin)  and note.end >= note_bin[i + 1].start:
+                if i + 1 < len(note_bin) and note.end >= note_bin[i + 1].start:
                     note.end = note_bin[i].start
-        midi_copy.instruments[0].notes = list(itertools.chain.from_iterable(note_bins))
-
+        midi_copy.instruments[0].notes = list(sorted(
+            itertools.chain.from_iterable(note_bins),
+            key=lambda x: x.time))
 
         midi_copy.instruments[0].control_changes = []
 

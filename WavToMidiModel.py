@@ -14,9 +14,9 @@ from MidiEncoding import MidiEncoding
 
 @keras.saving.register_keras_serializable()
 def masked_binary_crossentropy(y_true, y_pred):
-    tf.boolean_mask(y_pred, tf.not_equal(y_true, 0))
-    tf.boolean_mask(y_true, tf.not_equal(y_true, 0))
-    crossentropy = keras.losses.binary_crossentropy(y_true, y_pred)
+    y_pred_masked = tf.boolean_mask(y_pred, tf.not_equal(y_true, 0))
+    y_true_masked = tf.boolean_mask(y_true, tf.not_equal(y_true, 0))
+    crossentropy = keras.losses.binary_crossentropy(y_true_masked, y_pred_masked)
     return crossentropy
 
 class WavToMidiModel:

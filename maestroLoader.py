@@ -11,7 +11,8 @@ import utils
 from MidiEncoding import MidiEncoding
 from utils import split_array_into_chunks
 
-sparse_keys = ["frames", "onsets", "offsets"]
+sparse_keys = ["frames", "onsets", "offsets", "velocities"]
+
 
 def load_or_cache(songs_paths, cache_path):
     if not os.path.exists(cache_path):
@@ -21,6 +22,7 @@ def load_or_cache(songs_paths, cache_path):
             .map(lambda x: utils.dense_to_spare(x, sparse_keys))
         dataset.save(cache_path)
     return tf.data.Dataset.load(cache_path)
+
 
 def load_maestro_train(maestro_path, cache_path, max_songs = None):
     train_filenames, _, _ = load_maestro_filenames(maestro_path)
@@ -62,6 +64,7 @@ def load_song(midi_file, audio_file):
         **midi_encoding.to_dict()
     )
 
+
 def split_dataset_to_chunks(songs_dataset):
     songs_ds = tf.data.Dataset.from_generator(
         lambda: chunk_songs_lazy(songs_dataset),
@@ -74,6 +77,8 @@ def split_dataset_to_chunks(songs_dataset):
                                     name="onsets"),
             "offsets": tf.TensorSpec(shape=(config.chunk_length_frames, config.midi_num_pitches), dtype=tf.float32,
                                      name="offsets"),
+            "velocities": tf.TensorSpec(shape=(config.chunk_length_frames, config.midi_num_pitches), dtype=tf.float32,
+                                        name="velocities")
         }
     )
     return songs_ds
@@ -86,14 +91,16 @@ def chunk_songs_lazy(songs_dataset):
         frames_split = split_array_into_chunks(np.asarray(song["frames"]), config.chunk_length_frames)
         onsets_split = split_array_into_chunks(np.asarray(song["onsets"]), config.chunk_length_frames)
         offsets_split = split_array_into_chunks(np.asarray(song["offsets"]), config.chunk_length_frames)
+        velocities_split = split_array_into_chunks(np.asarray(song["velocities"]), config.chunk_length_frames)
 
-        for spectrogram, frames, onsets, offsets \
-                in zip(spectrogram_split, frames_split, onsets_split, offsets_split):
+        for spectrogram, frames, onsets, offsets, velocities \
+                in zip(spectrogram_split, frames_split, onsets_split, offsets_split, velocities_split):
             yield {
                 "spectrogram": spectrogram,
                 "frames": frames,
                 "onsets": onsets,
                 "offsets": offsets,
+                "velocities": velocities,
             }
 
 
@@ -112,6 +119,7 @@ def load_songs_dataset(songs_paths):
             "frames": tf.TensorSpec(shape=(None, config.midi_num_pitches), dtype=tf.float32, name="frames"),
             "onsets": tf.TensorSpec(shape=(None, config.midi_num_pitches), dtype=tf.float32, name="onsets"),
             "offsets": tf.TensorSpec(shape=(None, config.midi_num_pitches), dtype=tf.float32, name="offsets"),
+            "velocities": tf.TensorSpec(shape=(None, config.midi_num_pitches), dtype=tf.float32, name="velocities")
         }
     )
     return songs_ds

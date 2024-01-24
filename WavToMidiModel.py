@@ -1,4 +1,5 @@
 import keras
+import tensorflow as tf
 import librosa
 import numpy as np
 from keras import layers
@@ -10,6 +11,13 @@ import maestroLoader
 import utils
 from MidiEncoding import MidiEncoding
 
+
+@keras.saving.register_keras_serializable()
+def masked_binary_crossentropy(y_true, y_pred):
+    tf.boolean_mask(y_pred, tf.not_equal(y_true, 0))
+    tf.boolean_mask(y_true, tf.not_equal(y_true, 0))
+    crossentropy = keras.losses.binary_crossentropy(y_true, y_pred)
+    return crossentropy
 
 class WavToMidiModel:
     @dataclass
@@ -28,12 +36,12 @@ class WavToMidiModel:
         model.add(layers.Conv2D(filters=48, kernel_size=(3, 3), padding="same", activation="relu"))
         model.add(layers.BatchNormalization())
         model.add(layers.Conv2D(filters=48, kernel_size=(3, 3), padding="same", activation="relu"))
-        model.add(layers.MaxPooling2D(pool_size=(1, 2)))
         model.add(layers.Dropout(0.2))
+        model.add(layers.MaxPooling2D(pool_size=(1, 2)))
         model.add(layers.Conv2D(filters=96, kernel_size=(3, 3), padding="same", activation="relu"))
         model.add(layers.BatchNormalization())
-        model.add(layers.MaxPooling2D(pool_size=(1, 2)))
         model.add(layers.Dropout(0.2))
+        model.add(layers.MaxPooling2D(pool_size=(1, 2)))
         # flatten along frequency and channel axis
         _, times, frequencies, channels = model.get_layer(index=-1).output.shape
         model.add(layers.Reshape((-1, frequencies * channels)))
@@ -53,7 +61,7 @@ class WavToMidiModel:
         inputs = keras.Input(input_shape, name="spectrogram")
 
         onsets_acoustic = WavToMidiModel._acoustic_model(input_shape, "onsets_acoustic_model")(inputs)
-        onsets_memory = layers.Bidirectional(layers.LSTM(256, return_sequences=True), name="onsets_memory")(
+        onsets_memory = layers.Bidirectional(layers.GRU(256, return_sequences=True), name="onsets_memory")(
             onsets_acoustic)
         onsets_dropout = layers.Dropout(0.5)(onsets_memory)
         onsets_pred = layers.Conv1D(filters=config.midi_num_pitches, kernel_size=1, activation="sigmoid",
@@ -61,7 +69,7 @@ class WavToMidiModel:
             onsets_dropout)
 
         offsets_acoustic = WavToMidiModel._acoustic_model(input_shape, "offsets_acoustic_model")(inputs)
-        offsets_memory = layers.Bidirectional(layers.LSTM(256, return_sequences=True), name="offsets_memory")(
+        offsets_memory = layers.Bidirectional(layers.GRU(256, return_sequences=True), name="offsets_memory")(
             offsets_acoustic)
         offsets_dropout = layers.Dropout(0.5)(offsets_memory)
         offsets_pred = layers.Conv1D(filters=config.midi_num_pitches, kernel_size=1, activation="sigmoid",
@@ -70,8 +78,17 @@ class WavToMidiModel:
 
         frames_acoustic = WavToMidiModel._acoustic_model(input_shape, "frames_acoustic_model")(inputs)
 
+        velocities_acoustic = WavToMidiModel._acoustic_model(input_shape, "velocities_acoustic_model")(inputs)
+        combined_velocities = layers.Concatenate(name="combine_velocities")(
+            [velocities_acoustic, onsets_pred, offsets_pred])
+        velocities_model = layers.Bidirectional(layers.GRU(256, return_sequences=True), name="velocities_model")(
+            combined_velocities)
+        velocities_dropout = layers.Dropout(0.5)(velocities_model)
+        velocities_pred = layers.Conv1D(filters=config.midi_num_pitches, kernel_size=1, activation="sigmoid",
+                                       name="velocities_out")(velocities_dropout)
+
         combined = layers.Concatenate(name="combine")([frames_acoustic, onsets_pred, offsets_pred])
-        combined_memory = layers.Bidirectional(layers.LSTM(256, return_sequences=True), name="combined_memory")(
+        combined_memory = layers.Bidirectional(layers.GRU(256, return_sequences=True), name="combined_memory")(
             combined)
         combined_dropout = layers.Dropout(0.5)(combined_memory)
         frames_pred = layers.Conv1D(filters=config.midi_num_pitches, kernel_size=1, activation="sigmoid",
@@ -85,7 +102,8 @@ class WavToMidiModel:
             outputs={
                 "onsets": onsets_pred,
                 "offsets": offsets_pred,
-                "frames": frames_pred
+                "frames": frames_pred,
+                "velocities": velocities_pred
             }
         )
 
@@ -93,7 +111,12 @@ class WavToMidiModel:
             optimizer=keras.optimizers.Adam(
                 learning_rate=params.base_lr
             ),
-            loss=keras.losses.BinaryCrossentropy()
+            loss= {
+                "onsets": keras.losses.BinaryCrossentropy(),
+                "offsets": keras.losses.BinaryCrossentropy(),
+                "frames": keras.losses.BinaryCrossentropy(),
+                "velocities": masked_binary_crossentropy
+            }
         )
 
         return WavToMidiModel(model, params)

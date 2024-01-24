@@ -75,6 +75,7 @@ class MidiEncoding:
     onsets: np.ndarray
     offsets: np.ndarray
     frames: np.ndarray
+    velocities: np.ndarray
     frame_length_seconds: float
 
     @staticmethod
@@ -109,6 +110,7 @@ class MidiEncoding:
             onsets=onsets,
             offsets=offsets,
             frames=frames,
+            velocities=velocities,
             frame_length_seconds=frame_length_seconds
         )
 
@@ -236,6 +238,7 @@ class MidiEncoding:
             onsets=np.asarray(dict["onsets"]),
             offsets=np.asarray(dict["offsets"]),
             frames=np.asarray(dict["frames"]),
+            velocities=np.asarray(dict["velocities"]),
             frame_length_seconds=frame_length_seconds
         )
 
@@ -247,7 +250,8 @@ class MidiEncoding:
         return {
             "onsets": self.onsets,
             "offsets": self.offsets,
-            "frames": self.frames
+            "frames": self.frames,
+            "velocities": self.velocities,
         }
 
     def plot_on_spectrogram(self, spectrogram):

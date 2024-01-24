@@ -163,7 +163,8 @@ class WavToMidiModel:
                      {
                          "frames": x["frames"],
                          "onsets": x["onsets"],
-                         "offsets": x["offsets"]
+                         "offsets": x["offsets"],
+                         "velocities": x["velocities"]
                      }
                  )
                  ) \
@@ -181,7 +182,8 @@ class WavToMidiModel:
                      {
                          "frames": x["frames"],
                          "onsets": x["onsets"],
-                         "offsets": x["offsets"]
+                         "offsets": x["offsets"],
+                         "velocities": x["velocities"]
                      }
                  )
                  ) \
@@ -214,5 +216,6 @@ class WavToMidiModel:
         result["onsets"] = result["onsets"].numpy().squeeze()
         result["offsets"] = result["offsets"].numpy().squeeze()
         result["frames"] = result["frames"].numpy().squeeze()
+        result["velocities"] = result["velocities"].numpy().squeeze()
 
         return MidiEncoding.from_dict(result, config.frame_length_seconds)

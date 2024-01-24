@@ -168,7 +168,7 @@ class MidiEncoding:
             # find the last sustain event played during the note
             for i, note in enumerate(note_bin):
                 sustain_end = list(filter(
-                    lambda x: x["start"] <= note.end <= x["end"],
+                    lambda x: x["start"] < note.end < x["end"],
                     sustain_events)
                     )
                 if len(sustain_end) > 0:
@@ -176,10 +176,10 @@ class MidiEncoding:
 
                 # check a new note starts before the end
                 if i + 1 < len(note_bin) and note.end >= note_bin[i + 1].start:
-                    note.end = note_bin[i].start
+                    note.end = note_bin[i + 1].start
         midi_copy.instruments[0].notes = list(sorted(
             itertools.chain.from_iterable(note_bins),
-            key=lambda x: x.time))
+            key=lambda x: x.start))
 
         midi_copy.instruments[0].control_changes = []
 
@@ -263,9 +263,13 @@ class MidiEncoding:
             plt.colorbar(format='%+2.0f dB')
         frame_points = note_data_to_points(self.frames)
         plt.scatter(frame_points[0, :], frame_points[1, :], marker=",", s=3, alpha=0.5, color="blue")
-        onset_points = note_data_to_points(self.onsets)
+        onset_points = note_data_to_points(self.velocities)
         plt.scatter(onset_points[0], onset_points[1], marker=",", s=3, alpha=0.5, color="green")
         offset_points = note_data_to_points(self.offsets)
         plt.scatter(offset_points[0, :], offset_points[1, :], marker=",", s=3, alpha=0.5, color="red")
 
+        plt.show()
+
+        plt.figure(figsize=(10, 8))
+        plt.imshow(self.velocities.T, cmap='hot')
         plt.show()

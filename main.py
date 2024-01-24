@@ -1,4 +1,6 @@
 import pretty_midi
+import config
+import visual_midi
 
 from WavToMidiModel import WavToMidiModel
 from MidiEncoding import MidiEncoding
@@ -18,6 +20,6 @@ def infer():
 
 if __name__ == "__main__":
     midi_file = pretty_midi.PrettyMIDI("samples/test.mid")
-    extended_midi = MidiEncoding.extend_with_sustain(midi_file)
+    extended_midi = MidiEncoding.from_pretty_midi(midi_file, config.frame_length_seconds)
 
-    extended_midi.write("samples/test_output.mid")
+    extended_midi.plot_on_spectrogram(None)

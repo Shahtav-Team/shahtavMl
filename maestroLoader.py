@@ -1,4 +1,7 @@
 import os
+import random
+
+import librosa
 import numpy as np
 import pandas as pd
 import pretty_midi
@@ -48,8 +51,12 @@ def load_maestro_test(maestro_path, cache_path, max_songs = None):
     return load_or_cache(test_filenames, cache)
 
 
-def load_song(midi_file, audio_file):
+def load_song(midi_file, audio_file, noise=False):
     audio = audioUtils.load_file(audio_file)
+
+    if noise:
+        audio = add_noise(audio, config.noise_path)
+
     spectrogram = audioUtils.calc_spectrogram(audio)
 
     midi = pretty_midi.PrettyMIDI(midi_file)
@@ -63,6 +70,21 @@ def load_song(midi_file, audio_file):
         spectrogram=spectrogram,
         **midi_encoding.to_dict()
     )
+
+
+def add_noise(audio, noise_path):
+    # get the list of noise file
+    noise_file = random.choice(os.listdir(noise_path))
+
+    noise_audio = audioUtils.load_file(os.path.join(noise_path, noise_file))
+
+    # normalize the volume
+    noise_audio = librosa.util.normalize(noise_audio)
+
+    noise_audio = np.tile(noise_audio, 1 + (audio.size // noise_audio.size))
+    noise_audio = noise_audio[:audio.size]
+
+    return audio * (1 - config.noise_percentage) + noise_audio * config.noise_percentage
 
 
 def split_dataset_to_chunks(songs_dataset):

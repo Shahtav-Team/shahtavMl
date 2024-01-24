@@ -1,6 +1,7 @@
-import pretty_midi
+import audioUtils
+import maestroLoader
+import soundfile as sf
 import config
-import visual_midi
 
 from WavToMidiModel import WavToMidiModel
 from MidiEncoding import MidiEncoding
@@ -19,7 +20,7 @@ def infer():
 
 
 if __name__ == "__main__":
-    midi_file = pretty_midi.PrettyMIDI("samples/test.mid")
-    extended_midi = MidiEncoding.from_pretty_midi(midi_file, config.frame_length_seconds)
+    audio = audioUtils.load_file("./samples/song.wav")
+    audio = maestroLoader.add_noise(audio, config.noise_path)
 
-    extended_midi.plot_on_spectrogram(None)
+    sf.write('./output.wav', audio, config.sample_rate, subtype='PCM_24')

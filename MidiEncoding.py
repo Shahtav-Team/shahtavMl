@@ -80,7 +80,8 @@ class MidiEncoding:
 
     @staticmethod
     def from_pretty_midi(midi: PrettyMIDI, frame_length_seconds: float,
-                         onset_length_frames=1, offset_length_frames=1):
+                         onset_length_frames=1, offset_length_frames=1,
+                         array_length=None):
         """
         Encodes a midi object in this format.
         midi: a PrettyMIDI object which we want to encode. Should only have 1 instrument which contains all the notes we want to encode.
@@ -88,8 +89,8 @@ class MidiEncoding:
         onset_frame_length: how many frames should be marked as an onset during an onset. Having a larger value helps the network learn if onset data is imprecise.
         offset_frame_length: how many frames should be marked as an offset during an offset.
         """
-
-        array_length = round(midi.get_end_time() / frame_length_seconds) + 1
+        if array_length is None:
+            array_length = round(midi.get_end_time() / frame_length_seconds) + 1
         frames = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
         onsets = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
         offsets = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)

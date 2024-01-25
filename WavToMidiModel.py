@@ -28,9 +28,6 @@ def masked_binary_crossentropy(y_true, y_pred):
 
     return crossentropy - crossentropy_min
 
-@keras.saving.register_keras_serializable()
-
-
 class WavToMidiModel:
     @dataclass
     class Params:

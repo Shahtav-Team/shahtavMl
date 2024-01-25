@@ -14,16 +14,28 @@ from MidiEncoding import MidiEncoding
 
 @keras.saving.register_keras_serializable()
 def masked_binary_crossentropy(y_true, y_pred):
-    y_pred_masked = tf.boolean_mask(y_pred, tf.not_equal(y_true, 0))
-    y_true_masked = tf.boolean_mask(y_true, tf.not_equal(y_true, 0))
+    mask = tf.not_equal(y_true, 0)
+
+    y_pred_masked = tf.boolean_mask(y_pred, mask)
+    y_true_masked = tf.boolean_mask(y_true, mask)
+    # in the rare case where the targets are empty, return 0 instead of nan
+    if len(y_true_masked) == 0:
+        return tf.constant(0)
+    # When working with binary_crossentropy for regression on targets that are not 0 or 1,
+    # make the loss relative to the lowest possible loss given the target, so that a perfect model has a loss of 0.
     crossentropy = keras.losses.binary_crossentropy(y_true_masked, y_pred_masked)
-    return crossentropy
+    crossentropy_min = keras.losses.binary_crossentropy(y_true_masked, y_true_masked)
+
+    return crossentropy - crossentropy_min
+
+@keras.saving.register_keras_serializable()
+
 
 class WavToMidiModel:
     @dataclass
     class Params:
         base_lr: int = 0.0006
-        lr_decay: int = 0.9
+        lr_decay: int = 0.93
         lr_decay_steps: int = 10000
         batch_size = 16
 
@@ -105,7 +117,7 @@ class WavToMidiModel:
             optimizer=keras.optimizers.Adam(
                 learning_rate=params.base_lr
             ),
-            loss= {
+            loss={
                 "onsets": keras.losses.BinaryCrossentropy(),
                 "offsets": keras.losses.BinaryCrossentropy(),
                 "frames": keras.losses.BinaryCrossentropy(),

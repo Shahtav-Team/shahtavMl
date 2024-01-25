@@ -12,6 +12,22 @@ import config
 
 SUSTAIN_NO = 64
 
+def keep_first_true(arr):
+  """
+  Given a numpy array of booleans, returns the array but with all sequences of the value True
+  turned into False except for the first element of the sequence using vectorization.
+
+  Args:
+      arr: A numpy array of booleans.
+
+  Returns:
+      A numpy array of booleans with the specified modification.
+  """
+  roll_mask = np.roll(arr, 1)
+  roll_mask[0] = False
+  return arr & ~roll_mask
+
+
 
 def notes_to_pretty_midi(notes: List[pretty_midi.Note], bpm=120) -> PrettyMIDI:
     """
@@ -191,6 +207,7 @@ class MidiEncoding:
         if thresholds is None:
             thresholds = Thresholds()
         onsets = self.onsets > thresholds.onset_threshold
+        onsets = keep_first_true(onsets) # don't count it if the model outputs multiple onsets in a row.
         offsets = self.offsets > thresholds.offset_threshold
         frames = self.frames > thresholds.frame_threshold
 
@@ -199,11 +216,8 @@ class MidiEncoding:
             pitch_midi = pitch_id + config.midi_pitch_min
 
             onset_frame_nums, = np.nonzero(onsets[:, pitch_id])
-            curr_frame = 0
             for onset_frame in onset_frame_nums:
-                if curr_frame > onset_frame:
-                    continue
-                curr_frame = onset_frame
+                curr_frame = onset_frame + 1
 
                 # the note ends when {offsets} is true, or when {frames} is not true
                 while curr_frame < offsets.shape[0]:
@@ -211,7 +225,7 @@ class MidiEncoding:
                     is_offset = offsets[curr_frame, pitch_id]
                     is_frame = frames[curr_frame, pitch_id]
 
-                    if not is_onset and (is_offset or not is_frame):
+                    if is_onset or is_offset or not is_frame:
                         # the note has ended
                         break
                     curr_frame += 1

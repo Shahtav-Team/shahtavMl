@@ -20,7 +20,7 @@ def masked_binary_crossentropy(y_true, y_pred):
     y_true_masked = tf.boolean_mask(y_true, mask)
     # in the rare case where the targets are empty, return 0 instead of nan
     if len(y_true_masked) == 0:
-        return tf.constant(0)
+        return tf.constant(0., dtype = tf.float32)
     # When working with binary_crossentropy for regression on targets that are not 0 or 1,
     # make the loss relative to the lowest possible loss given the target, so that a perfect model has a loss of 0.
     crossentropy = keras.losses.binary_crossentropy(y_true_masked, y_pred_masked)
@@ -158,7 +158,7 @@ class WavToMidiModel:
         # map dataset so it works as needed for train API
         train_dataset = train_data \
             .cache() \
-            .shuffle(10000) \
+            .shuffle(train_data.cardinality()) \
             .map(lambda x: utils.sparse_to_dense(x, maestroLoader.sparse_keys)) \
             .map(lambda x:
                  (

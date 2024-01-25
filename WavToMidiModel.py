@@ -97,7 +97,7 @@ class WavToMidiModel:
                 "onsets": onsets_pred,
                 "offsets": offsets_pred,
                 "frames": frames_pred,
-                "velocities": velocities_pred
+                # "velocities": velocities_pred
             }
         )
 
@@ -109,7 +109,7 @@ class WavToMidiModel:
                 "onsets": keras.losses.BinaryCrossentropy(),
                 "offsets": keras.losses.BinaryCrossentropy(),
                 "frames": keras.losses.BinaryCrossentropy(),
-                "velocities": masked_binary_crossentropy
+                # "velocities": masked_binary_crossentropy
             }
         )
 

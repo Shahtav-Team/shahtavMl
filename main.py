@@ -5,6 +5,7 @@ import visual_midi
 from WavToMidiModel import WavToMidiModel
 from MidiEncoding import MidiEncoding
 import librosa
+import keras
 def infer():
     model_path = "models/onsets_offset_modelv1"
     song_path = "samples/MIDI-Unprocessed_Chamber2_MID--AUDIO_09_R3_2018_wav--1.wav"
@@ -17,9 +18,15 @@ def infer():
     midi = result.to_pretty_midi()
     midi.write("samples/test.mid")
 
+def plot_model():
+    model = WavToMidiModel.create()
+
+    model.model.summary()
+    print()
+    print()
+
+    model.model.get_layer("onsets_acoustic_model").summary()
+
 
 if __name__ == "__main__":
-    midi_file = pretty_midi.PrettyMIDI("samples/test.mid")
-    extended_midi = MidiEncoding.from_pretty_midi(midi_file, config.frame_length_seconds)
-
-    extended_midi.plot_on_spectrogram(None)
+    plot_model()

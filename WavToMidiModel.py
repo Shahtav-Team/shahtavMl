@@ -158,7 +158,7 @@ class WavToMidiModel:
                          "frames": x["frames"],
                          "onsets": x["onsets"],
                          "offsets": x["offsets"],
-                         "velocities": x["velocities"]
+                         # "velocities": x["velocities"]
                      }
                  )
                  ) \
@@ -177,7 +177,7 @@ class WavToMidiModel:
                          "frames": x["frames"],
                          "onsets": x["onsets"],
                          "offsets": x["offsets"],
-                         "velocities": x["velocities"]
+                         # "velocities": x["velocities"]
                      }
                  )
                  ) \

@@ -219,7 +219,8 @@ class MidiEncoding:
 
                 onset_time = onset_frame * self.frame_length_seconds
                 offset_time = offset_frame * self.frame_length_seconds
-                note = pretty_midi.Note(velocity=64,
+                velocity = int(self.velocities[curr_frame, pitch_id] * 127)
+                note = pretty_midi.Note(velocity=velocity,
                                         pitch=pitch_midi,
                                         start=onset_time,
                                         end=offset_time)

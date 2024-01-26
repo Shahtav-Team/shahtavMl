@@ -112,7 +112,8 @@ class MidiEncoding:
         offsets = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
         velocities = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
 
-        midi = MidiEncoding.extend_with_sustain(midi)
+        if config.extend_sustain_pedal:
+            midi = MidiEncoding.extend_with_sustain(midi)
 
         for note in midi.instruments[0].notes:
             pitch = note.pitch
@@ -207,7 +208,6 @@ class MidiEncoding:
         if thresholds is None:
             thresholds = Thresholds()
         onsets = self.onsets > thresholds.onset_threshold
-        # todo: does this work on a 2d array?
         offsets = self.offsets > thresholds.offset_threshold
         frames = self.frames > thresholds.frame_threshold
 

@@ -53,7 +53,9 @@ def load_song(midi_file, audio_file):
     spectrogram = audioUtils.calc_spectrogram(audio)
 
     midi = pretty_midi.PrettyMIDI(midi_file)
-    midi_encoding = MidiEncoding.from_pretty_midi(midi, config.frame_length_seconds)
+    midi_encoding = MidiEncoding.from_pretty_midi(midi, config.frame_length_seconds,
+                                                  onset_length_frames=config.encoding_onset_length_frames,
+                                                  offset_length_frames=config.encoding_offset_length_frames)
 
     # crop the spectrogram and midi encoding to be the same length
     spectrogram = spectrogram[: midi_encoding.length_frames()]

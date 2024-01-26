@@ -213,14 +213,15 @@ class MidiEncoding:
 
         notes = []
         for pitch_id in range(config.midi_num_pitches):
+            curr_frame = 0
             pitch_midi = pitch_id + config.midi_pitch_min
-
             onsets_for_pitch = onsets[:, pitch_id]
             # onsets_for_pitch = keep_first_true(onsets_for_pitch)
             onset_frame_nums, = np.nonzero(onsets_for_pitch)
             for onset_frame in onset_frame_nums:
-                curr_frame = onset_frame + 1
-
+                if onset_frame < curr_frame:
+                    continue
+                curr_frame = onset_frame
                 # the note ends when {offsets} is true, or when {frames} is not true
                 while curr_frame < offsets.shape[0]:
                     is_onset = onsets[curr_frame, pitch_id]

@@ -207,7 +207,7 @@ class MidiEncoding:
         if thresholds is None:
             thresholds = Thresholds()
         onsets = self.onsets > thresholds.onset_threshold
-        onsets = keep_first_true(onsets) # don't count it if the model outputs multiple onsets in a row.
+        # todo: does this work on a 2d array?
         offsets = self.offsets > thresholds.offset_threshold
         frames = self.frames > thresholds.frame_threshold
 
@@ -215,7 +215,9 @@ class MidiEncoding:
         for pitch_id in range(config.midi_num_pitches):
             pitch_midi = pitch_id + config.midi_pitch_min
 
-            onset_frame_nums, = np.nonzero(onsets[:, pitch_id])
+            onsets_for_pitch = onsets[:, pitch_id]
+            onsets_for_pitch = keep_first_true(onsets_for_pitch)
+            onset_frame_nums, = np.nonzero(onsets_for_pitch)
             for onset_frame in onset_frame_nums:
                 curr_frame = onset_frame + 1
 

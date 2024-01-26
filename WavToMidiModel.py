@@ -38,7 +38,6 @@ class WavToMidiModel:
 
     @staticmethod
     def _acoustic_model(inp_shape, name):
-
         model = keras.Sequential(name=name)
         model.add(keras.Input(shape=inp_shape))
         model.add(layers.Reshape((-1, config.spectrogram_n_bins, 1)))

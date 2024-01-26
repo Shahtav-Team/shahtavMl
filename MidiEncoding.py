@@ -216,7 +216,7 @@ class MidiEncoding:
             pitch_midi = pitch_id + config.midi_pitch_min
 
             onsets_for_pitch = onsets[:, pitch_id]
-            onsets_for_pitch = keep_first_true(onsets_for_pitch)
+            # onsets_for_pitch = keep_first_true(onsets_for_pitch)
             onset_frame_nums, = np.nonzero(onsets_for_pitch)
             for onset_frame in onset_frame_nums:
                 curr_frame = onset_frame + 1
@@ -227,7 +227,7 @@ class MidiEncoding:
                     is_offset = offsets[curr_frame, pitch_id]
                     is_frame = frames[curr_frame, pitch_id]
 
-                    if is_onset or is_offset or not is_frame:
+                    if not is_onset and (is_offset or not is_frame):
                         # the note has ended
                         break
                     curr_frame += 1

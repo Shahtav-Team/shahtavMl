@@ -38,6 +38,7 @@ class WavToMidiModel:
 
     @staticmethod
     def _acoustic_model(inp_shape, name):
+
         model = keras.Sequential(name=name)
         model.add(keras.Input(shape=inp_shape))
         model.add(layers.Reshape((-1, config.spectrogram_n_bins, 1)))
@@ -45,13 +46,12 @@ class WavToMidiModel:
         model.add(layers.Conv2D(filters=48, kernel_size=(3, 3), padding="same", activation="relu"))
         model.add(layers.BatchNormalization())
         model.add(layers.Conv2D(filters=48, kernel_size=(3, 3), padding="same", activation="relu"))
-        model.add(layers.BatchNormalization())
-        model.add(layers.Dropout(0.2))
         model.add(layers.MaxPooling2D(pool_size=(1, 2)))
+        model.add(layers.Dropout(0.2))
         model.add(layers.Conv2D(filters=96, kernel_size=(3, 3), padding="same", activation="relu"))
         model.add(layers.BatchNormalization())
-        model.add(layers.Dropout(0.2))
         model.add(layers.MaxPooling2D(pool_size=(1, 2)))
+        model.add(layers.Dropout(0.2))
         # flatten along frequency and channel axis
         _, times, frequencies, channels = model.get_layer(index=-1).output.shape
         model.add(layers.Reshape((-1, frequencies * channels)))
@@ -73,29 +73,32 @@ class WavToMidiModel:
         onsets_acoustic = WavToMidiModel._acoustic_model(input_shape, "onsets_acoustic_model")(inputs)
         onsets_memory = layers.Bidirectional(layers.LSTM(256, return_sequences=True), name="onsets_memory")(
             onsets_acoustic)
+        onsets_dropout = layers.Dropout(0.5)(onsets_memory)
         onsets_pred = layers.Conv1D(filters=config.midi_num_pitches, kernel_size=1, activation="sigmoid",
-                                    name="onsets_out")(onsets_memory)
+                                    name="onsets_out")(onsets_dropout)
 
         offsets_acoustic = WavToMidiModel._acoustic_model(input_shape, "offsets_acoustic_model")(inputs)
         offsets_memory = layers.Bidirectional(layers.LSTM(256, return_sequences=True), name="offsets_memory")(
             offsets_acoustic)
+        offsets_dropout = layers.Dropout(0.5)(offsets_memory)
         offsets_pred = layers.Conv1D(filters=config.midi_num_pitches, kernel_size=1, activation="sigmoid",
-                                     name="offsets_out")(offsets_memory)
+                                     name="offsets_out")(offsets_dropout)
 
         frames_acoustic = WavToMidiModel._acoustic_model(input_shape, "frames_acoustic_model")(inputs)
 
         combined = layers.Concatenate(name="combine")([frames_acoustic, onsets_pred, offsets_pred])
         combined_memory = layers.Bidirectional(layers.LSTM(256, return_sequences=True), name="combined_memory")(
             combined)
+        combined_dropout = layers.Dropout(0.5)(combined_memory)
         frames_pred = layers.Conv1D(filters=config.midi_num_pitches, kernel_size=1, activation="sigmoid",
-                                    name="frames_out")(
-            combined_memory)
+                                    name="frames_out")(combined_dropout)
 
         velocities_acoustic = WavToMidiModel._acoustic_model(input_shape, "velocities_acoustic_model")(inputs)
         velocities_memory = layers.Bidirectional(layers.LSTM(256, return_sequences=True), name="velocities_memory")(
             velocities_acoustic)
+        velocities_dropout = layers.Dropout(0.5)(velocities_memory)
         velocities_pred = layers.Conv1D(filters=config.midi_num_pitches, kernel_size=1, activation="sigmoid",
-                                       name="velocities_out")(velocities_memory)
+                                       name="velocities_out")(velocities_dropout)
 
 
         model = keras.Model(

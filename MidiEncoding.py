@@ -222,7 +222,7 @@ class MidiEncoding:
 
                 # the note ends when {offsets} is true, or when {frames} is not true
                 while curr_frame < offsets.shape[0]:
-                    is_onset = onsets[curr_frame, pitch_id]
+                    is_onset = onsets_for_pitch[curr_frame]
                     is_offset = offsets[curr_frame, pitch_id]
                     is_frame = frames[curr_frame, pitch_id]
 

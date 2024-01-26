@@ -300,3 +300,10 @@ class MidiEncoding:
         plt.figure(figsize=(10, 8))
         plt.imshow(self.velocities.T, cmap='hot')
         plt.show()
+
+    def plot(self, length=30):
+        arr = np.array([self.offsets, self.onsets, self.frames])
+        arr = np.swapaxes(arr, 0, 2)
+        plt.figure(figsize=(length, 15))
+        plt.imshow(arr, origin="lower")
+        plt.show()

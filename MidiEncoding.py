@@ -232,6 +232,7 @@ class MidiEncoding:
                 pedal_events.append(pretty_midi.ControlChange(number=SUSTAIN_NO, value=127, time = time))
             elif pedal_p < thresholds.pedal_off_threshold and curr_pedal:
                 pedal_events.append(pretty_midi.ControlChange(number=SUSTAIN_NO, value=0, time = time))
+                curr_pedal = False
 
         # Handle note events
         onsets = self.onsets > thresholds.onset_threshold
@@ -253,7 +254,7 @@ class MidiEncoding:
                     is_offset = offsets[curr_frame, pitch_id]
                     is_frame = frames[curr_frame, pitch_id]
 
-                    if is_onset or is_offset or not is_frame:
+                    if not is_onset and (is_offset or not is_frame):
                         # the note has ended
                         break
                     curr_frame += 1

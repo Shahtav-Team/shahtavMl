@@ -222,5 +222,6 @@ class WavToMidiModel:
         result["offsets"] = result["offsets"].numpy().squeeze()
         result["frames"] = result["frames"].numpy().squeeze()
         result["velocities"] = result["velocities"].numpy().squeeze()
+        result["pedals"] = result["pedals"].numpy().squeeze()
 
         return MidiEncoding.from_dict(result, config.frame_length_seconds)

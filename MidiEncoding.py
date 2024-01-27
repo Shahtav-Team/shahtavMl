@@ -29,16 +29,19 @@ def keep_first_true(arr):
 
 
 
-def notes_to_pretty_midi(notes: List[pretty_midi.Note], bpm=120) -> PrettyMIDI:
+def notes_to_pretty_midi(notes: List[pretty_midi.Note], bpm=120, control_changes = None) -> PrettyMIDI:
     """
     utility function for creating a pretty midi object from a list of pretty midi notes.
     :param notes: a list of pretty notes.
     :param bpm: the tempo of the returned prettyMIDI object, in beats per minute. Sometimes imparts how the pretty midi object is displayed.
     :return: a pretty midi object, with a single instrument containing just these notes.
+    :param control_changes: list of pretty midi control changes, or None if there are no control changes
     """
     midi = pretty_midi.PrettyMIDI(initial_tempo=bpm)
     instrument = pretty_midi.Instrument(0)
     instrument.notes = notes
+    if control_changes is not None:
+        instrument.control_changes = control_changes
     midi.instruments.append(instrument)
     return midi
 
@@ -47,7 +50,7 @@ def note_data_to_points(note_data):
     """
     For visualizing the midi representation. Converts from a list of points where the note_data is active.
     :param note_data: a 2d array of shape(time, midi_num_pitches)
-    :return: a list of coordinates on the spectogram where the note_data is not zero.
+    :return: a list of coordinates on the spectrogram where the note_data is not zero.
     """
     note_points = [[], []]
     for frame_num in range(len(note_data)):
@@ -65,12 +68,15 @@ def note_data_to_points(note_data):
 @dataclass
 class Thresholds:
     """
-    The output of the network is an array of probabilities for MIDI events, and we need to decode those events into actual evnets.
+    The output of the network is an array of probabilities for MIDI events, and we need to decode those events into actual events.
     This class denotes the thresholds for when the network output is considered a real midi event.
     """
     onset_threshold: float = 0.5
     offset_threshold: float = 0.5
     frame_threshold: float = 0.5
+
+    pedal_on_threshold = 0.7
+    pedal_off_threshold = 0.3
 
 
 @dataclass
@@ -215,6 +221,19 @@ class MidiEncoding:
     def to_pretty_midi(self, thresholds: Thresholds = None) -> pretty_midi.PrettyMIDI:
         if thresholds is None:
             thresholds = Thresholds()
+
+        pedal_events = []
+        # Handle pedal events
+        curr_pedal = False
+        for i, pedal_p in enumerate(self.pedals):
+            time = i * self.frame_length_seconds
+            if pedal_p > thresholds.pedal_on_threshold and not curr_pedal:
+                curr_pedal = True
+                pedal_events.append(pretty_midi.ControlChange(number=SUSTAIN_NO, value=127, time = time))
+            elif pedal_p < thresholds.pedal_off_threshold and curr_pedal:
+                pedal_events.append(pretty_midi.ControlChange(number=SUSTAIN_NO, value=0, time = time))
+
+        # Handle note events
         onsets = self.onsets > thresholds.onset_threshold
         offsets = self.offsets > thresholds.offset_threshold
         frames = self.frames > thresholds.frame_threshold
@@ -249,7 +268,7 @@ class MidiEncoding:
                                         end=offset_time)
                 notes.append(note)
         notes.sort(key=lambda note: note.start)
-        return notes_to_pretty_midi(notes)
+        return notes_to_pretty_midi(notes, control_changes=pedal_events)
 
     def length_frames(self):
         return self.frames.shape[0]
@@ -293,7 +312,7 @@ class MidiEncoding:
     def plot_on_spectrogram(self, spectrogram):
         if spectrogram is not None:
             spectrogram = np.asarray(spectrogram)
-            spectrogram = spectrogram.T  # take the transpose of the spectrogram so it's plotted correctly
+            spectrogram = spectrogram.T  # take the transpose of the spectrogram, so it's plotted correctly
             librosa.display.specshow(spectrogram, sr=config.sample_rate, hop_length=config.hop_length, x_axis='time', y_axis='mel')
             plt.colorbar(format='%+2.0f dB')
         frame_points = note_data_to_points(self.frames)
@@ -312,6 +331,7 @@ class MidiEncoding:
         plt.figure(figsize=(8, 6))
         plt.title("Pedals")
         plt.plot(self.pedals)
+        plt.plot()
 
     def plot(self, length=30):
         arr = np.array([self.offsets, self.onsets, self.frames])
@@ -319,3 +339,8 @@ class MidiEncoding:
         plt.figure(figsize=(length, 15))
         plt.imshow(arr, origin="lower")
         plt.show()
+
+        plt.figure(figsize=(length, 6))
+        plt.title("Pedals")
+        plt.plot(self.pedals)
+        plt.plot()

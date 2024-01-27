@@ -85,13 +85,13 @@ class MidiEncoding:
     frames: this array is 1 wherever the note is playing, or 0 wherever it isn't.
     velocities: on note onset, this value is equal to the midi velocity, normalized to the range (0,1]. Everywhere else, this value is unspecified.
      If loaded directly from mid, it should be set to 0. If in the output of the network, it may be anything the network decides to output.
-    TODO: add velocity.
     """
 
     onsets: np.ndarray
     offsets: np.ndarray
     frames: np.ndarray
     velocities: np.ndarray
+    pedals: np.ndarray
     frame_length_seconds: float
 
     @staticmethod
@@ -111,9 +111,16 @@ class MidiEncoding:
         onsets = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
         offsets = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
         velocities = np.zeros((array_length, config.midi_num_pitches), dtype=np.float32)
-
+        pedals = np.zeros(array_length, dtype=np.float32)
         if config.extend_sustain_pedal:
             midi = MidiEncoding.extend_with_sustain(midi)
+
+        pedal_events = MidiEncoding.get_sustain_events(midi)
+        for event in pedal_events:
+            start = round(event["start"] / frame_length_seconds)
+            end = round(event["end"] / frame_length_seconds)
+            pedals[start: end] = 1
+
 
         for note in midi.instruments[0].notes:
             pitch = note.pitch
@@ -129,7 +136,8 @@ class MidiEncoding:
             offsets=offsets,
             frames=frames,
             velocities=velocities,
-            frame_length_seconds=frame_length_seconds
+            frame_length_seconds=frame_length_seconds,
+            pedals=pedals
         )
 
     @staticmethod
@@ -265,6 +273,7 @@ class MidiEncoding:
             offsets=np.asarray(dict["offsets"]),
             frames=np.asarray(dict["frames"]),
             velocities=np.asarray(dict["velocities"]),
+            pedals=np.asarray(dict["pedals"]),
             frame_length_seconds=frame_length_seconds
         )
 
@@ -278,6 +287,7 @@ class MidiEncoding:
             "offsets": self.offsets,
             "frames": self.frames,
             "velocities": self.velocities,
+            "pedals": self.pedals
         }
 
     def plot_on_spectrogram(self, spectrogram):
@@ -298,6 +308,10 @@ class MidiEncoding:
         plt.figure(figsize=(10, 8))
         plt.imshow(self.velocities.T, cmap='hot')
         plt.show()
+
+        plt.figure(figsize=(8, 6))
+        plt.title("Pedals")
+        plt.plot(self.pedals)
 
     def plot(self, length=30):
         arr = np.array([self.offsets, self.onsets, self.frames])

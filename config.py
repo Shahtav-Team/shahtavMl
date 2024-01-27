@@ -14,7 +14,7 @@ midi_num_pitches = 88
 encoding_onset_length_frames = 2
 encoding_offset_length_frames = 2
 
-extend_sustain_pedal = True
+extend_sustain_pedal = False
 
 frame_length_seconds = hop_length / sample_rate
 chunk_length_frames = chunk_length_seconds / frame_length_seconds

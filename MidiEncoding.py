@@ -1,35 +1,36 @@
 import copy
 import itertools
+from dataclasses import dataclass
 from typing import List
+
+import librosa
+import numpy as np
 import pretty_midi
 from matplotlib import pyplot as plt
 from pretty_midi import PrettyMIDI
-import numpy as np
-from dataclasses import dataclass
-import librosa
 
 import config
 
 SUSTAIN_NO = 64
 
+
 def keep_first_true(arr):
-  """
-  Given a numpy array of booleans, returns the array but with all sequences of the value True
-  turned into False except for the first element of the sequence using vectorization.
+    """
+    Given a numpy array of booleans, returns the array but with all sequences of the value True
+    turned into False except for the first element of the sequence using vectorization.
 
-  Args:
-      arr: A numpy array of booleans.
+    Args:
+        arr: A numpy array of booleans.
 
-  Returns:
-      A numpy array of booleans with the specified modification.
-  """
-  roll_mask = np.roll(arr, 1)
-  roll_mask[0] = False
-  return arr & ~roll_mask
+    Returns:
+        A numpy array of booleans with the specified modification.
+    """
+    roll_mask = np.roll(arr, 1)
+    roll_mask[0] = False
+    return arr & ~roll_mask
 
 
-
-def notes_to_pretty_midi(notes: List[pretty_midi.Note], bpm=120, control_changes = None) -> PrettyMIDI:
+def notes_to_pretty_midi(notes: List[pretty_midi.Note], bpm=120, control_changes=None) -> PrettyMIDI:
     """
     utility function for creating a pretty midi object from a list of pretty midi notes.
     :param notes: a list of pretty notes.
@@ -127,7 +128,6 @@ class MidiEncoding:
             end = round(event["end"] / frame_length_seconds)
             pedals[start: end] = 1
 
-
         for note in midi.instruments[0].notes:
             pitch = note.pitch
             start = round(note.start / frame_length_seconds)
@@ -202,7 +202,7 @@ class MidiEncoding:
                 sustain_end = list(filter(
                     lambda x: x["start"] < note.end < x["end"],
                     sustain_events)
-                    )
+                )
                 if len(sustain_end) > 0:
                     note.end = sustain_end[0]["end"]
 
@@ -217,8 +217,7 @@ class MidiEncoding:
 
         return midi_copy
 
-
-    def to_pretty_midi(self, thresholds: Thresholds = None) -> pretty_midi.PrettyMIDI:
+    def to_pretty_midi(self, thresholds: Thresholds = None, vmin = 20, vmax = 90) -> pretty_midi.PrettyMIDI:
         if thresholds is None:
             thresholds = Thresholds()
 
@@ -229,9 +228,9 @@ class MidiEncoding:
             time = i * self.frame_length_seconds
             if pedal_p > thresholds.pedal_on_threshold and not curr_pedal:
                 curr_pedal = True
-                pedal_events.append(pretty_midi.ControlChange(number=SUSTAIN_NO, value=127, time = time))
+                pedal_events.append(pretty_midi.ControlChange(number=SUSTAIN_NO, value=127, time=time))
             elif pedal_p < thresholds.pedal_off_threshold and curr_pedal:
-                pedal_events.append(pretty_midi.ControlChange(number=SUSTAIN_NO, value=0, time = time))
+                pedal_events.append(pretty_midi.ControlChange(number=SUSTAIN_NO, value=0, time=time))
                 curr_pedal = False
 
         # Handle note events
@@ -265,7 +264,7 @@ class MidiEncoding:
 
                 onset_time = onset_frame * self.frame_length_seconds
                 offset_time = offset_frame * self.frame_length_seconds
-                velocity = int(self.velocities[curr_frame, pitch_id] * 127)
+                velocity = int(self.velocities[curr_frame, pitch_id] * (vmax - vmin) + vmin)
                 note = pretty_midi.Note(velocity=velocity,
                                         pitch=pitch_midi,
                                         start=onset_time,
@@ -283,7 +282,6 @@ class MidiEncoding:
             self.offsets = self.offsets[:length]
             self.frames = self.frames[:length]
             self.velocities = self.velocities[:length]
-
 
     @staticmethod
     def from_dict(dict, frame_length_seconds):
@@ -317,7 +315,8 @@ class MidiEncoding:
         if spectrogram is not None:
             spectrogram = np.asarray(spectrogram)
             spectrogram = spectrogram.T  # take the transpose of the spectrogram, so it's plotted correctly
-            librosa.display.specshow(spectrogram, sr=config.sample_rate, hop_length=config.hop_length, x_axis='time', y_axis='mel')
+            librosa.display.specshow(spectrogram, sr=config.sample_rate, hop_length=config.hop_length, x_axis='time',
+                                     y_axis='mel')
             plt.colorbar(format='%+2.0f dB')
         frame_points = note_data_to_points(self.frames)
         plt.scatter(frame_points[0, :], frame_points[1, :], marker=",", s=3, alpha=0.5, color="blue")

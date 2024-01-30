@@ -77,13 +77,13 @@ def load_song(midi_file, audio_file, noise=False):
 def add_noise(audio, noise_path):
     background_noise = audiomentations.AddBackgroundNoise(
         sounds_path=noise_path,
-        min_snr_in_db=10.0,
-        max_snr_in_db=70.0,
-        p=1
+        min_snr_in_db=15.0,
+        max_snr_in_db=25.0,
+        p=0.7
     )
 
     air_absorption = audiomentations.AirAbsorption(
-        p=1
+        p=0.7
     )
 
     return air_absorption(

@@ -9,7 +9,7 @@ import pretty_midi
 from matplotlib import pyplot as plt
 from pretty_midi import PrettyMIDI
 
-import config
+from . import config
 
 SUSTAIN_NO = 64
 
@@ -78,6 +78,27 @@ class Thresholds:
 
     pedal_on_threshold = 0.7
     pedal_off_threshold = 0.3
+
+
+@dataclass
+class Note:
+    start: int
+    length: int
+    pitch: int
+    velocity: int
+    voice: int = 0
+
+
+@dataclass
+class PedalEvent:
+    time: int
+    on: bool
+
+
+@dataclass
+class Song:
+    notes: list[Note]
+    pedal_events: list[PedalEvent]
 
 
 @dataclass
@@ -217,7 +238,30 @@ class MidiEncoding:
 
         return midi_copy
 
-    def to_pretty_midi(self, thresholds: Thresholds = None, vmin = 20, vmax = 90) -> pretty_midi.PrettyMIDI:
+    def to_pretty_midi(self, thresholds: Thresholds = None, vmin=20, vmax=90) -> pretty_midi.PrettyMIDI:
+        song = self.decode(thresholds, vmin, vmax)
+
+        pedal_events = []
+        notes = []
+
+        for event in song.pedal_events:
+            pedal_events.append(
+                pretty_midi.ControlChange(number=SUSTAIN_NO,
+                                          value=127 if event.on else 0,
+                                          time=event.time * self.frame_length_seconds)
+            )
+
+        for note in song.notes:
+            notes.append(
+                pretty_midi.Note(velocity=note.velocity,
+                                 pitch=note.pitch,
+                                 start=note.start * self.frame_length_seconds,
+                                 end=(note.start + note.length) * self.frame_length_seconds)
+            )
+
+        return notes_to_pretty_midi(notes, control_changes=pedal_events)
+
+    def decode(self, thresholds: Thresholds = None, vmin=20, vmax=90) -> Song:
         if thresholds is None:
             thresholds = Thresholds()
 
@@ -225,12 +269,12 @@ class MidiEncoding:
         # Handle pedal events
         curr_pedal = False
         for i, pedal_p in enumerate(self.pedals):
-            time = i * self.frame_length_seconds
+            time = i
             if pedal_p > thresholds.pedal_on_threshold and not curr_pedal:
                 curr_pedal = True
-                pedal_events.append(pretty_midi.ControlChange(number=SUSTAIN_NO, value=127, time=time))
+                pedal_events.append(PedalEvent(time=time, on=True))
             elif pedal_p < thresholds.pedal_off_threshold and curr_pedal:
-                pedal_events.append(pretty_midi.ControlChange(number=SUSTAIN_NO, value=0, time=time))
+                pedal_events.append(PedalEvent(time=time, on=False))
                 curr_pedal = False
 
         # Handle note events
@@ -262,16 +306,22 @@ class MidiEncoding:
                     curr_frame += 1
                 offset_frame = curr_frame
 
-                onset_time = onset_frame * self.frame_length_seconds
-                offset_time = offset_frame * self.frame_length_seconds
-                velocity = int(self.velocities[curr_frame, pitch_id] * (vmax - vmin) + vmin)
-                note = pretty_midi.Note(velocity=velocity,
-                                        pitch=pitch_midi,
-                                        start=onset_time,
-                                        end=offset_time)
+                onset_time = onset_frame
+                offset_time = offset_frame
+                try:
+                    velocity = int(self.velocities[onset_frame, pitch_id] * (vmax - vmin) + vmin)
+                except IndexError as e:
+                    print(f"Error: {e}\n\nvelocity fallback to 90")
+                    print(f"Velocities: {self.velocities.shape}")
+                    print(f"Onsets: {self.onsets.shape}")
+                    print(f"Offsets: {self.offsets.shape}")
+                    print(f"OnsetFrame: {onset_frame}")
+                    print(f"CurrFrame: {curr_frame}")
+                    velocity = 90
+                note = Note(start=onset_time, length=offset_time - onset_time, pitch=pitch_midi, velocity=velocity)
                 notes.append(note)
         notes.sort(key=lambda note: note.start)
-        return notes_to_pretty_midi(notes, control_changes=pedal_events)
+        return Song(notes=notes, pedal_events=pedal_events)
 
     def length_frames(self):
         return self.frames.shape[0]

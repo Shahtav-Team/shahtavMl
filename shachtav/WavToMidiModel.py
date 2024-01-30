@@ -5,11 +5,11 @@ import numpy as np
 from keras import layers
 from dataclasses import dataclass
 
-import audioUtils
-import config
-import maestroLoader
-import utils
-from MidiEncoding import MidiEncoding
+from . import audioUtils
+from . import config
+from . import maestroLoader
+from . import utils
+from .MidiEncoding import MidiEncoding
 
 
 @keras.saving.register_keras_serializable()

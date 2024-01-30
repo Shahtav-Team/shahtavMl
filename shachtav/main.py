@@ -2,8 +2,8 @@ import pretty_midi
 import config
 import visual_midi
 
-from WavToMidiModel import WavToMidiModel
-from MidiEncoding import MidiEncoding
+from .WavToMidiModel import WavToMidiModel
+from .MidiEncoding import MidiEncoding
 import librosa
 import keras
 def infer():

@@ -5,11 +5,11 @@ import pretty_midi
 from tqdm import tqdm
 import tensorflow as tf
 
-import audioUtils
-import config
-import utils
-from MidiEncoding import MidiEncoding
-from utils import split_array_into_chunks
+from . import audioUtils
+from . import config
+from . import utils
+from .MidiEncoding import MidiEncoding
+from .utils import split_array_into_chunks
 
 sparse_keys = ["frames", "onsets", "offsets", "velocities", "pedals"]
 

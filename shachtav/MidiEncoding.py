@@ -10,9 +10,9 @@ from matplotlib import pyplot as plt
 from pretty_midi import PrettyMIDI
 
 from . import config
-import visual_midi
 
 SUSTAIN_NO = 64
+
 
 def keep_first_true(arr):
     """
@@ -29,10 +29,12 @@ def keep_first_true(arr):
     roll_mask[0] = False
     return arr & ~roll_mask
 
-def plot_midi(midi, plot_height = 650, show_beat = False):
-  preset = visual_midi.Preset(plot_height=plot_height, show_bar = False, show_beat = show_beat)
-  plotter = visual_midi.Plotter(preset)
-  plot = plotter.show(midi, f"out_{np.random.randint(0, 1000000)}.html")
+
+def plot_midi(midi, plot_height=650, show_beat=False):
+    import visual_midi
+    preset = visual_midi.Preset(plot_height=plot_height, show_bar=False, show_beat=show_beat)
+    plotter = visual_midi.Plotter(preset)
+    plot = plotter.show(midi, f"out_{np.random.randint(0, 1000000)}.html")
 
 
 def notes_to_pretty_midi(notes: List[pretty_midi.Note], bpm=120, control_changes=None) -> PrettyMIDI:
@@ -126,8 +128,6 @@ class Song:
             )
 
         return notes_to_pretty_midi(notes, control_changes=pedal_events)
-
-
 
 
 @dataclass

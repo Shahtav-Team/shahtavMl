@@ -1,6 +1,8 @@
 import os
 import random
 
+import audiomentations
+
 import librosa
 import numpy as np
 import pandas as pd
@@ -73,6 +75,22 @@ def load_song(midi_file, audio_file, noise=False):
 
 
 def add_noise(audio, noise_path):
+    background_noise = audiomentations.AddBackgroundNoise(
+        sounds_path=noise_path,
+        min_snr_in_db=10.0,
+        max_snr_in_db=70.0,
+        p=1
+    )
+
+    air_absorption = audiomentations.AirAbsorption(
+        p=1
+    )
+
+    return air_absorption(
+            background_noise(audio, config.sample_rate), config.sample_rate)
+
+
+def add_noise_legacy(audio, noise_path):
     # get the list of noise file
     noise_file = random.choice(os.listdir(noise_path))
 
@@ -130,7 +148,7 @@ def load_songs_lazy(songs_paths):
     iterable = list(songs_paths.iterrows())
     iterable = tqdm(iterable)
     for index, song in iterable:
-        yield load_song(song["midi_filename"], song["audio_filename"])
+        yield load_song(song["midi_filename"], song["audio_filename"], True)
 
 
 def load_songs_dataset(songs_paths):

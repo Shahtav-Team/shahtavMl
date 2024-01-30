@@ -2,8 +2,8 @@ import pretty_midi
 import config
 import visual_midi
 
-from WavToMidiModel import WavToMidiModel
-from MidiEncoding import MidiEncoding
+from .WavToMidiModel import WavToMidiModel
+from .MidiEncoding import MidiEncoding
 import librosa
 import keras
 def infer():
@@ -15,7 +15,7 @@ def infer():
     audio = audio[:sr * 60]
     result = model.infer(audio, sr)
 
-    midi = result.to_pretty_midi()
+    midi = result.decode().to_pretty_midi()
     midi.write("samples/test.mid")
 
 def plot_model():

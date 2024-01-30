@@ -97,8 +97,32 @@ class PedalEvent:
 
 @dataclass
 class Song:
+    frame_length_seconds: float
     notes: list[Note]
     pedal_events: list[PedalEvent]
+
+    def to_pretty_midi(self):
+        pedal_events = []
+        notes = []
+
+        for event in self.pedal_events:
+            pedal_events.append(
+                pretty_midi.ControlChange(number=SUSTAIN_NO,
+                                          value=127 if event.on else 0,
+                                          time=event.time * self.frame_length_seconds)
+            )
+
+        for note in self.notes:
+            notes.append(
+                pretty_midi.Note(velocity=note.velocity,
+                                 pitch=note.pitch,
+                                 start=note.start * self.frame_length_seconds,
+                                 end=(note.start + note.length) * self.frame_length_seconds)
+            )
+
+        return notes_to_pretty_midi(notes, control_changes=pedal_events)
+
+
 
 
 @dataclass
@@ -238,29 +262,6 @@ class MidiEncoding:
 
         return midi_copy
 
-    def to_pretty_midi(self, thresholds: Thresholds = None, vmin=20, vmax=90) -> pretty_midi.PrettyMIDI:
-        song = self.decode(thresholds, vmin, vmax)
-
-        pedal_events = []
-        notes = []
-
-        for event in song.pedal_events:
-            pedal_events.append(
-                pretty_midi.ControlChange(number=SUSTAIN_NO,
-                                          value=127 if event.on else 0,
-                                          time=event.time * self.frame_length_seconds)
-            )
-
-        for note in song.notes:
-            notes.append(
-                pretty_midi.Note(velocity=note.velocity,
-                                 pitch=note.pitch,
-                                 start=note.start * self.frame_length_seconds,
-                                 end=(note.start + note.length) * self.frame_length_seconds)
-            )
-
-        return notes_to_pretty_midi(notes, control_changes=pedal_events)
-
     def decode(self, thresholds: Thresholds = None, vmin=20, vmax=90) -> Song:
         if thresholds is None:
             thresholds = Thresholds()
@@ -308,20 +309,15 @@ class MidiEncoding:
 
                 onset_time = onset_frame
                 offset_time = offset_frame
-                try:
-                    velocity = int(self.velocities[onset_frame, pitch_id] * (vmax - vmin) + vmin)
-                except IndexError as e:
-                    print(f"Error: {e}\n\nvelocity fallback to 90")
-                    print(f"Velocities: {self.velocities.shape}")
-                    print(f"Onsets: {self.onsets.shape}")
-                    print(f"Offsets: {self.offsets.shape}")
-                    print(f"OnsetFrame: {onset_frame}")
-                    print(f"CurrFrame: {curr_frame}")
-                    velocity = 90
+                velocity = int(self.velocities[onset_frame, pitch_id] * (vmax - vmin) + vmin)
                 note = Note(start=onset_time, length=offset_time - onset_time, pitch=pitch_midi, velocity=velocity)
                 notes.append(note)
         notes.sort(key=lambda note: note.start)
-        return Song(notes=notes, pedal_events=pedal_events)
+        return Song(
+            notes=notes,
+            pedal_events=pedal_events,
+            frame_length_seconds=self.frame_length_seconds
+        )
 
     def length_frames(self):
         return self.frames.shape[0]

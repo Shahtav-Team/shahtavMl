@@ -15,7 +15,7 @@ def infer():
     audio = audio[:sr * 60]
     result = model.infer(audio, sr)
 
-    midi = result.to_pretty_midi()
+    midi = result.decode().to_pretty_midi()
     midi.write("samples/test.mid")
 
 def plot_model():

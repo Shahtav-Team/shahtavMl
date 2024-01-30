@@ -2,31 +2,36 @@ import pretty_midi
 import config
 import visual_midi
 
-from .WavToMidiModel import WavToMidiModel
-from .MidiEncoding import MidiEncoding
+from shachtav.BeatDownbeatDetector import BeatDownbeatDetector
+from shachtav import WavToMidiModel
+from shachtav.MidiEncoding import MidiEncoding, notes_to_pretty_midi, plot_midi
 import librosa
 import keras
+
+from shachtav.VoiceSplitting import ClefSplitModel
 def infer():
-    model_path = "models/onsets_offset_modelv1"
-    song_path = "samples/MIDI-Unprocessed_Chamber2_MID--AUDIO_09_R3_2018_wav--1.wav"
+    wav_to_midi_model_path = "models/onsets_offsets_model"
+    clef_split_model_path = "models/clefs_model_v1"
+    song_path = "samples/MIDI-UNPROCESSED_01-03_R1_2014_MID--AUDIO_01_R1_2014_wav--1.wav"
 
-    model = WavToMidiModel.load(model_path)
+    wav_to_midi = WavToMidiModel.WavToMidiModel.load(wav_to_midi_model_path)
+    clef_split = ClefSplitModel.load(clef_split_model_path)
+    beat_detector = BeatDownbeatDetector()
+
     audio, sr = librosa.load(song_path)
-    audio = audio[:sr * 60]
-    result = model.infer(audio, sr)
+    audio = audio[:sr * 30]
 
-    midi = result.decode().to_pretty_midi()
-    midi.write("samples/test.mid")
+    result = wav_to_midi.infer(audio, sr)
+    song = result.decode()
+    beat_info = beat_detector.find_beats(song_path, [3, 4])
+    song, notes_split = clef_split.run(song, beat_info, 4)
 
-def plot_model():
-    model = WavToMidiModel.create()
+    for notes in [notes_split.bass_notes, notes_split.treble_notes]:
+        midi = notes_to_pretty_midi(notes)
+        plot_midi(midi)
 
-    model.model.summary()
-    print()
-    print()
-
-    model.model.get_layer("onsets_acoustic_model").summary()
+    print(song)
 
 
 if __name__ == "__main__":
-    plot_model()
+    infer()

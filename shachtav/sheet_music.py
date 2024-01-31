@@ -86,6 +86,18 @@ def notes_to_music21(notes: List[pretty_midi.Note], stream: music21.stream.Strea
 
 
 def score_from_notes(notes_split: NotesSplit, beat_info: BeatInfo):
+    """
+    Produces a music21 score object from info from other models.
+    Args:
+        notes_split: from ClefSplitModel
+        beat_info: from BeatDownbeatDetector
+    Returns:
+
+    Raises:
+        Exception if something goes wrong. Should wrap this with try and catch.
+    """
+    if notes_split is None:
+        raise ValueError("notes_split must not be None")
     score = music21.stream.Score()
     treble_part = music21.stream.Part(id="treble")
     treble_part.append(music21.clef.TrebleClef())

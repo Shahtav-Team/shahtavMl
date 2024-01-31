@@ -106,7 +106,21 @@ class ClefSplitModel:
         return bass_notes, treble_notes, onsets, clefs
 
     def run(self, song: MidiEncoding.Song, beat_info: BeatInfo, quantize_resolution: int = 4):
+        """
+        Identifies which notes should be put in the top of the grand staff (voice = 1) and the bottom of the grand staff (voice = 0)
+        Args:
+            song: the output of WavToMidiModel
+            beat_info: the output of BeatDownbeatDetector
+            quantize_resolution: how many units of time should be in a signle beat after quantization.
+        Returns:
+            song: the input song, modified to include voices.
+            notesSplit: NotesSplit. a NotesSplit object which determines which notes are on which staff.
+            or None if the song was too short and the output can't be determined.
+
+        """
         song = copy.deepcopy(song)
+        if len(beat_info.beats) <= 1:
+            return song, None
         midi = song.to_pretty_midi()
         midi_quantized = quantize_midi(midi, beat_info.beats, quantize_resolution)
         bass_notes, treble_notes, onsets, clefs = self.split_clefs(midi_quantized)

@@ -77,17 +77,23 @@ def load_song(midi_file, audio_file, noise=False):
 def add_noise(audio, noise_path):
     background_noise = audiomentations.AddBackgroundNoise(
         sounds_path=noise_path,
-        min_snr_in_db=15.0,
-        max_snr_in_db=25.0,
+        min_snr_db=19.0,
+        max_snr_db=25.0,
         p=0.7
     )
 
     air_absorption = audiomentations.AirAbsorption(
-        p=0.7
+        p=1
     )
 
-    return air_absorption(
-            background_noise(audio, config.sample_rate), config.sample_rate)
+    gausian_noise = audiomentations.AddGaussianSNR(
+        min_snr_db=45.0,
+        max_snr_db=55.0,
+        p=1
+    )
+
+    return gausian_noise(air_absorption(
+            background_noise(audio, config.sample_rate), config.sample_rate), config.sample_rate)
 
 
 def add_noise_legacy(audio, noise_path):

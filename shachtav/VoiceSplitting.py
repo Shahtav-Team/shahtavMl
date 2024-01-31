@@ -84,7 +84,7 @@ class ClefSplitModel:
         self.model = model
 
     def split_clefs(self, quantized_mid):
-        onsets = quantized_midi_to_onsets(quantized_mid, int(quantized_mid.get_end_time()))
+        onsets = quantized_midi_to_onsets(quantized_mid, int(quantized_mid.get_end_time()) + 1)
         onsets_expanded = np.expand_dims(onsets, axis=0)  # add extra dimension to array so that it can be passed to the model.
         clefs = self.model(onsets_expanded)
         clefs = np.asarray(clefs)

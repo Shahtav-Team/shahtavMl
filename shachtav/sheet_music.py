@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import List
 
 import music21
 import numpy as np
@@ -13,10 +14,21 @@ class NoteGroup:
     start_time: int
     notes: list[pretty_midi.Note]
 
+def downbeat_times(downbeats):
+    downbeat_indexes, = np.nonzero(downbeats)
+    return downbeat_indexes * 4
 
-def notes_to_music21(notes, stream, beat_info: BeatInfo):
+def find_next_downbeat(db_times, time):
+    next_db_index = np.searchsorted(db_times, time, side = "right")
+    if next_db_index < len(db_times):
+        return db_times[next_db_index]
+    else:
+        # todo: figure out a proper number to put here based on the time signature.
+        return db_times[-1] + 16
+
+def notes_to_music21(notes: List[pretty_midi.Note], stream: music21.stream.Stream, beat_info: BeatInfo):
     notes = sorted(notes, key=lambda note: note.start)
-
+    db_times = downbeat_times(beat_info.is_downbeat)
     # group notes by the same start time
     i = 0
     notes_groups = [NoteGroup(start_time=0, notes=[])]
@@ -37,6 +49,8 @@ def notes_to_music21(notes, stream, beat_info: BeatInfo):
         stream.append(music21.note.Rest(beat_phase))
     # add all the notes to the stream
     for i, group in enumerate(notes_groups):
+        if len(group.notes) == 0:
+            continue
         start_time = group.start_time
 
         longest_duration = max((note.duration) for note in group.notes)
@@ -52,19 +66,23 @@ def notes_to_music21(notes, stream, beat_info: BeatInfo):
             # todo: figure out exactly what we're doing with the last note, since we can't use the next note for refrence of length.
             next_note_start = start_time + 4
 
-        length_quarters = (next_note_start - start_time) / 4  # divide by 4, since we are mesuring in 16ths and need quarters.
+        next_downbeat = find_next_downbeat(db_times, start_time)
+
+        note_end = min(next_note_start, next_downbeat) # notes can't last between multiple measures.
+        note_end = max(note_end, next_note_start) # ensure notes don't have negative duration
+
+        pitches = [note.pitch for note in valid_notes]
+        length_quarters = (note_end - start_time) / 4  # divide by 4, since we are measuring in 16ths and need quarters.
         if len(pitches) == 0:
             to_add = music21.note.Rest(quarterLength=length_quarters)
-            stream.append(to_add)
+            stream.insert(start_time / 4, to_add)
         else:
             to_add = music21.chord.Chord(pitches, quarterLength=length_quarters)
-            stream.append(to_add)
-
-    key = stream.analyze("key")
-    stream.insert(0, key)
+            stream.insert(start_time / 4, to_add)
 
     # add measures based on the given beat.
     stream.makeMeasures(inPlace=True)
+    stream.makeRests(inPlace=True)
 
 
 def score_from_notes(notes_split: NotesSplit, beat_info: BeatInfo):

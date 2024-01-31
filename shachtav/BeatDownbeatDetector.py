@@ -54,7 +54,10 @@ class BeatDownbeatDetector:
         is_downbeat = beats_estimate[:, 1] == 1
         downbeats = beats_estimate[is_downbeat][:, 0]
         beats = beats_estimate[:, 0]
-        beats_per_bar = np.max(beats_estimate[:, 1])
+        if len(beats_estimate) != 0:
+            beats_per_bar = np.max(beats_estimate[:, 1])
+        else:
+            beats_per_bar = 4
         return BeatInfo(
             beats=beats,
             is_downbeat=is_downbeat,

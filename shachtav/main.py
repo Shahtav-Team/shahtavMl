@@ -22,22 +22,17 @@ def infer():
     beat_detector = BeatDownbeatDetector()
 
     audio, sr = librosa.load(song_path)
-    audio = audio[:sr * 30]
+    audio = audio[:sr * 120]
 
     result = wav_to_midi.infer(audio, sr)
     song = result.decode()
     beat_info = beat_detector.find_beats_from_array(audio, sr, [3, 4])
     beat_info2 = beat_detector.find_beats(song_path, [3, 4])
-    print(beat_info)
-    print(beat_info2)
     song, notes_split = clef_split.run(song, beat_info, 4)
 
-    for notes in [notes_split.bass_notes, notes_split.treble_notes]:
-        midi = notes_to_pretty_midi(notes)
-        plot_midi(midi)
 
-    # score = sheet_music.score_from_notes(notes_split, beat_info)
-    # score.write("musicxml.pdf", "samples/test.pdf")
+    score = sheet_music.score_from_notes(notes_split, beat_info)
+    score.write("musicxml.pdf", "samples/test3.pdf")
 
 def test_musecore():
     score = music21.stream.Stream()

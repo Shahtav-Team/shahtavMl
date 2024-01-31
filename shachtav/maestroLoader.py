@@ -10,13 +10,13 @@ import pretty_midi
 from tqdm import tqdm
 import tensorflow as tf
 
-import audioUtils
-import config
-import utils
-from MidiEncoding import MidiEncoding
-from utils import split_array_into_chunks
+from . import audioUtils
+from . import config
+from . import utils
+from .MidiEncoding import MidiEncoding
+from .utils import split_array_into_chunks
 
-sparse_keys = ["frames", "onsets", "offsets", "velocities"]
+sparse_keys = ["frames", "onsets", "offsets", "velocities", "pedals"]
 
 
 def load_or_cache(songs_paths, cache_path):
@@ -62,10 +62,13 @@ def load_song(midi_file, audio_file, noise=False):
     spectrogram = audioUtils.calc_spectrogram(audio)
 
     midi = pretty_midi.PrettyMIDI(midi_file)
-    midi_encoding = MidiEncoding.from_pretty_midi(midi, config.frame_length_seconds)
+    midi_encoding = MidiEncoding.from_pretty_midi(midi, config.frame_length_seconds,
+                                                  onset_length_frames=config.encoding_onset_length_frames,
+                                                  offset_length_frames=config.encoding_offset_length_frames)
 
-    # crop the empty end of the spectrogram to make it the same shape as the midi
+    # crop the spectrogram and midi encoding to be the same length
     spectrogram = spectrogram[: midi_encoding.length_frames()]
+    midi_encoding.cop_to_length(len(spectrogram))
     assert len(spectrogram) == midi_encoding.length_frames()
 
     return dict(
@@ -124,7 +127,9 @@ def split_dataset_to_chunks(songs_dataset):
             "offsets": tf.TensorSpec(shape=(config.chunk_length_frames, config.midi_num_pitches), dtype=tf.float32,
                                      name="offsets"),
             "velocities": tf.TensorSpec(shape=(config.chunk_length_frames, config.midi_num_pitches), dtype=tf.float32,
-                                        name="velocities")
+                                        name="velocities"),
+            "pedals": tf.TensorSpec(shape=(config.chunk_length_frames,), dtype=tf.float32,
+                                        name="pedals"),
         }
     )
     return songs_ds
@@ -138,15 +143,18 @@ def chunk_songs_lazy(songs_dataset):
         onsets_split = split_array_into_chunks(np.asarray(song["onsets"]), config.chunk_length_frames)
         offsets_split = split_array_into_chunks(np.asarray(song["offsets"]), config.chunk_length_frames)
         velocities_split = split_array_into_chunks(np.asarray(song["velocities"]), config.chunk_length_frames)
+        pedals_split = split_array_into_chunks(np.asarray(song["pedals"]), config.chunk_length_frames)
 
-        for spectrogram, frames, onsets, offsets, velocities \
-                in zip(spectrogram_split, frames_split, onsets_split, offsets_split, velocities_split):
+
+        for spectrogram, frames, onsets, offsets, velocities,pedals \
+                in zip(spectrogram_split, frames_split, onsets_split, offsets_split, velocities_split, pedals_split):
             yield {
                 "spectrogram": spectrogram,
                 "frames": frames,
                 "onsets": onsets,
                 "offsets": offsets,
                 "velocities": velocities,
+                "pedals": pedals
             }
 
 
@@ -165,7 +173,8 @@ def load_songs_dataset(songs_paths):
             "frames": tf.TensorSpec(shape=(None, config.midi_num_pitches), dtype=tf.float32, name="frames"),
             "onsets": tf.TensorSpec(shape=(None, config.midi_num_pitches), dtype=tf.float32, name="onsets"),
             "offsets": tf.TensorSpec(shape=(None, config.midi_num_pitches), dtype=tf.float32, name="offsets"),
-            "velocities": tf.TensorSpec(shape=(None, config.midi_num_pitches), dtype=tf.float32, name="velocities")
+            "velocities": tf.TensorSpec(shape=(None, config.midi_num_pitches), dtype=tf.float32, name="velocities"),
+            "pedals": tf.TensorSpec(shape=(None,), dtype=tf.float32,name="pedals"),
         }
     )
     return songs_ds

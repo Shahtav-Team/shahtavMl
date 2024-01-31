@@ -11,6 +11,13 @@ midi_pitch_min = 21
 midi_pitch_max = 108
 midi_num_pitches = 88
 
+encoding_onset_length_frames = 2
+encoding_offset_length_frames = 2
+
+extend_sustain_pedal = False
+
+quantize_resolution = 4
+
 frame_length_seconds = hop_length / sample_rate
 chunk_length_frames = chunk_length_seconds / frame_length_seconds
 # assert that chunk_length_frames is a whole number, meaning the chunk length perfectly divides the frame length.

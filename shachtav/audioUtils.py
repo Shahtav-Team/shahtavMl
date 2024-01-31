@@ -1,7 +1,7 @@
 import librosa
 import numpy as np
 
-import config
+from . import config
 
 
 def load_file(filename):

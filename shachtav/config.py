@@ -24,6 +24,3 @@ chunk_length_frames = chunk_length_seconds / frame_length_seconds
 assert chunk_length_frames == int(chunk_length_frames)
 chunk_length_frames = int(chunk_length_frames)
 raw_audio_chunk_length = chunk_length_seconds * sample_rate
-
-noise_percentage = 0.04
-noise_path = "./noise/"

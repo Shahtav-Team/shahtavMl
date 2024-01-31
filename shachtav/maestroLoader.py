@@ -19,45 +19,45 @@ from .utils import split_array_into_chunks
 sparse_keys = ["frames", "onsets", "offsets", "velocities", "pedals"]
 
 
-def load_or_cache(songs_paths, cache_path):
+def load_or_cache(songs_paths, cache_path, noise_path=None):
     if not os.path.exists(cache_path):
         print(f"Creating Dataset cache {cache_path}")
-        dataset = load_songs_dataset(songs_paths)\
+        dataset = load_songs_dataset(songs_paths, noise_path)\
             .apply(split_dataset_to_chunks)\
             .map(lambda x: utils.dense_to_spare(x, sparse_keys))
         dataset.save(cache_path)
     return tf.data.Dataset.load(cache_path)
 
 
-def load_maestro_train(maestro_path, cache_path, max_songs = None):
+def load_maestro_train(maestro_path, cache_path, max_songs=None, noise_path=None):
     train_filenames, _, _ = load_maestro_filenames(maestro_path)
     if max_songs is not None:
         train_filenames = train_filenames[:max_songs]
     cache = os.path.join(cache_path, "train_cache.tfrecord")
-    return load_or_cache(train_filenames, cache)
+    return load_or_cache(train_filenames, cache, noise_path)
 
 
-def load_maestro_valid(maestro_path, cache_path, max_songs = None):
+def load_maestro_valid(maestro_path, cache_path, max_songs = None, noise_path=None):
     _, _, valid_filenames = load_maestro_filenames(maestro_path)
     if max_songs is not None:
         valid_filenames = valid_filenames[:max_songs]
     cache = os.path.join(cache_path, "valid_cache.tfrecord")
-    return load_or_cache(valid_filenames, cache)
+    return load_or_cache(valid_filenames, cache, noise_path=None)
 
 
-def load_maestro_test(maestro_path, cache_path, max_songs = None):
+def load_maestro_test(maestro_path, cache_path, max_songs = None, noise_path=None):
     _, test_filenames, _ = load_maestro_filenames(maestro_path)
     if max_songs is not None:
         test_filenames = test_filenames[:max_songs]
     cache = os.path.join(cache_path, "test_cache.tfrecord")
-    return load_or_cache(test_filenames, cache)
+    return load_or_cache(test_filenames, cache, noise_path)
 
 
-def load_song(midi_file, audio_file, noise=False):
+def load_song(midi_file, audio_file, noise_path=None):
     audio = audioUtils.load_file(audio_file)
 
-    if noise:
-        audio = add_noise(audio, config.noise_path)
+    if noise_path is not None:
+        audio = add_noise(audio, noise_path)
 
     spectrogram = audioUtils.calc_spectrogram(audio)
 
@@ -158,16 +158,16 @@ def chunk_songs_lazy(songs_dataset):
             }
 
 
-def load_songs_lazy(songs_paths):
+def load_songs_lazy(songs_paths, noise_path=None):
     iterable = list(songs_paths.iterrows())
     iterable = tqdm(iterable)
     for index, song in iterable:
-        yield load_song(song["midi_filename"], song["audio_filename"], True)
+        yield load_song(song["midi_filename"], song["audio_filename"], noise_path)
 
 
-def load_songs_dataset(songs_paths):
+def load_songs_dataset(songs_paths, noise_path=None):
     songs_ds = tf.data.Dataset.from_generator(
-        lambda: load_songs_lazy(songs_paths),
+        lambda: load_songs_lazy(songs_paths, noise_path),
         output_signature={
             "spectrogram": tf.TensorSpec(shape=(None, config.spectrogram_n_bins), dtype=tf.float32, name="spectrogram"),
             "frames": tf.TensorSpec(shape=(None, config.midi_num_pitches), dtype=tf.float32, name="frames"),

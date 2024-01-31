@@ -42,7 +42,7 @@ def load_maestro_valid(maestro_path, cache_path, max_songs = None, noise_path=No
     if max_songs is not None:
         valid_filenames = valid_filenames[:max_songs]
     cache = os.path.join(cache_path, "valid_cache.tfrecord")
-    return load_or_cache(valid_filenames, cache, noise_path=None)
+    return load_or_cache(valid_filenames, cache, noise_path)
 
 
 def load_maestro_test(maestro_path, cache_path, max_songs = None, noise_path=None):

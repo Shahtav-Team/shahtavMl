@@ -86,13 +86,13 @@ def add_noise(audio, noise_path):
     )
 
     air_absorption = audiomentations.AirAbsorption(
-        p=1
+        p=0.7
     )
 
     gausian_noise = audiomentations.AddGaussianSNR(
         min_snr_db=45.0,
         max_snr_db=55.0,
-        p=1
+        p=0.5
     )
 
     return gausian_noise(air_absorption(

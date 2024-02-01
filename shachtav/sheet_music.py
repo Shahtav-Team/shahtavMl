@@ -69,7 +69,7 @@ def notes_to_music21(notes: List[pretty_midi.Note], stream: music21.stream.Strea
         next_downbeat = find_next_downbeat(db_times, start_time)
 
         note_end = min(next_note_start, next_downbeat) # notes can't last between multiple measures.
-        note_end = max(note_end, next_note_start) # ensure notes don't have negative duration
+        note_end = max(note_end, start_time) # ensure notes don't have negative duration
 
         pitches = [note.pitch for note in valid_notes]
         length_quarters = (note_end - start_time) / 4  # divide by 4, since we are measuring in 16ths and need quarters.
@@ -77,8 +77,16 @@ def notes_to_music21(notes: List[pretty_midi.Note], stream: music21.stream.Strea
             to_add = music21.note.Rest(quarterLength=length_quarters)
             stream.insert(start_time / 4, to_add)
         else:
-            to_add = music21.chord.Chord(pitches, quarterLength=length_quarters)
+            m_21_notes = [music21.note.Note(pitch=pitch, quarterLength=length_quarters) for pitch in pitches]
+            to_add = music21.chord.Chord([music21.note.Note(pitch=pitch, quarterLength=length_quarters) for pitch in pitches], quarterLength=length_quarters)
             stream.insert(start_time / 4, to_add)
+
+    # For some reason, natural notes are given accidentals even though they shouldn't be given.
+    # Remove those accidentals.
+    for note in stream.notes:
+        for pitch in note.pitches:
+            if pitch.accidental is not None and pitch.accidental.alter == 0:
+                pitch.accidental = None
 
     # add measures based on the given beat.
     stream.makeMeasures(inPlace=True)
@@ -108,10 +116,15 @@ def score_from_notes(notes_split: NotesSplit, beat_info: BeatInfo):
     notes_to_music21(notes_split.bass_notes, bass_part, beat_info)
 
     score.insert(0, treble_part)
-    score.insert(1, bass_part)
+    score.insert(0, bass_part)
 
     key = score.analyze("key")
+    # key = music21.key.KeySignature(0)
     score.parts[0].measure(1).insert(0, key)
     score.parts[1].measure(1).insert(0, key)
+    music21.stream.makeNotation.makeAccidentalsInMeasureStream(score.parts[0], useKeySignature=key)
+    music21.stream.makeNotation.makeAccidentalsInMeasureStream(score.parts[1], useKeySignature=key)
+
+    score.show("text")
 
     return score

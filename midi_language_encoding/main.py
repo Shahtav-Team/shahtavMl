@@ -1,7 +1,9 @@
 import pretty_midi
+import tensorflow as tf
 
 MAX_TIME_VALUE = 500
 SUSTAIN_NO = 64
+
 
 def event_list_to_tokens(events):
     events.sort(key=lambda e: (e["time"], e["type"]))
@@ -21,7 +23,6 @@ def event_list_to_tokens(events):
             while time_difference > 0:
                 yield f"<time {min(time_difference, MAX_TIME_VALUE) / 100.0}>"
                 time_difference -= MAX_TIME_VALUE
-
 
             current_bin = event_bin
             current_event_type = None
@@ -74,4 +75,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    print(tf.version.VERSION)

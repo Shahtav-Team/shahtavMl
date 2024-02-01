@@ -45,8 +45,6 @@ def notes_to_music21(notes: List[pretty_midi.Note], stream: music21.stream.Strea
     # the start of the piece is not always a downbeat.
     # add rests at the start of the beat so that the start of each coresponds with a downbeat.
     beat_phase = np.argmax(beat_info.is_downbeat)
-    if beat_phase != 0:
-        stream.append(music21.note.Rest(beat_phase))
     # add all the notes to the stream
     for i, group in enumerate(notes_groups):
         if len(group.notes) == 0:
@@ -79,7 +77,7 @@ def notes_to_music21(notes: List[pretty_midi.Note], stream: music21.stream.Strea
         else:
             m_21_notes = [music21.note.Note(pitch=pitch, quarterLength=length_quarters) for pitch in pitches]
             to_add = music21.chord.Chord([music21.note.Note(pitch=pitch, quarterLength=length_quarters) for pitch in pitches], quarterLength=length_quarters)
-            stream.insert(start_time / 4, to_add)
+            stream.insert(start_time / 4 + beat_phase, to_add)
 
     # For some reason, natural notes are given accidentals even though they shouldn't be given.
     # Remove those accidentals.
@@ -119,7 +117,6 @@ def score_from_notes(notes_split: NotesSplit, beat_info: BeatInfo):
     score.insert(0, bass_part)
 
     key = score.analyze("key")
-    # key = music21.key.KeySignature(0)
     score.parts[0].measure(1).insert(0, key)
     score.parts[1].measure(1).insert(0, key)
     music21.stream.makeNotation.makeAccidentalsInMeasureStream(score.parts[0], useKeySignature=key)

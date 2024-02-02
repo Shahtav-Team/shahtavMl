@@ -86,6 +86,8 @@ class Thresholds:
     pedal_on_threshold = 0.7
     pedal_off_threshold = 0.3
 
+    min_note_length_frames = 1
+
 
 @dataclass
 class Note:
@@ -296,6 +298,9 @@ class MidiEncoding:
             onset_frame_nums, = np.nonzero(onsets_for_pitch)
             curr_frame = 0
             for onset_frame in onset_frame_nums:
+                if thresholds.min_note_length_frames >= 1 and not frames[curr_frame, pitch_id]:
+                    # skip empty note
+                    continue
                 if curr_frame > onset_frame:
                     continue
                 curr_frame = onset_frame
@@ -311,7 +316,9 @@ class MidiEncoding:
                         break
                     curr_frame += 1
                 offset_frame = curr_frame
-
+                if offset_frame - onset_frame < thresholds.min_note_length_frames:
+                    # note too short, don't include it
+                    continue
                 onset_time = onset_frame
                 offset_time = offset_frame
                 velocity = int(self.velocities[onset_frame, pitch_id] * (vmax - vmin) + vmin)

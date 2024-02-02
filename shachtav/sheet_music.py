@@ -110,8 +110,45 @@ def score_from_notes(notes_split: NotesSplit, beat_info: BeatInfo):
     score.insert(0, treble_part)
     score.insert(1, bass_part)
 
-    key = score.analyze("key")
-    score.parts[0].measure(1).insert(0, key)
-    score.parts[1].measure(1).insert(0, key)
+    keys = get_key_windowed(score)
+    update_key_signatures(score, keys)
 
     return score
+
+
+def get_key_windowed(score : music21.stream.Score, window_size=4, window_step=None):
+    if window_step is None:
+        window_step = window_size
+
+    len_measures = len(score.getElementsByClass(music21.stream.Part)[0].getElementsByClass(music21.stream.Measure))
+
+    keys = []
+
+    for i in range(1, len_measures + 1 - window_size, window_step):
+        measures = score.measures(i, i + window_size)
+
+        keys.append(
+            {
+                "measure_start": i,
+                "measure_length": window_step,
+                "key_signature": measures.analyze('key')
+            }
+        )
+
+    return keys
+
+
+def update_key_signatures(score: music21.stream.Score, key_signatures):
+    first_part = score.getElementsByClass(music21.stream.Part)[0]
+    second_part = score.getElementsByClass(music21.stream.Part)[1]
+
+    last_key = None
+
+    for key_sig in key_signatures:
+        if key_sig["key_signature"] != last_key:
+            last_key = key_sig["key_signature"]
+            first_measure = first_part.measure(key_sig["measure_start"])
+            second_measure = second_part.measure(key_sig["measure_start"])
+
+            first_measure.insert(0, last_key)
+            second_measure.insert(0, last_key)

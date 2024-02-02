@@ -130,11 +130,12 @@ def score_from_notes(notes_split: NotesSplit, beat_info: BeatInfo,
     score.insert(0, treble_part)
     score.insert(0, bass_part)
 
-    keys = get_key_windowed(score)
-    update_key_signatures(score, keys)
-    
-    music21.stream.makeNotation.makeAccidentalsInMeasureStream(score.parts[0], useKeySignature=True)
-    music21.stream.makeNotation.makeAccidentalsInMeasureStream(score.parts[1], useKeySignature=True)
+    key = score.analyze("key")
+    score.parts[0].measure(1).insert(0, key)
+    score.parts[1].measure(1).insert(0, key)
+
+    music21.stream.makeNotation.makeAccidentalsInMeasureStream(score.parts[0], useKeySignature=key)
+    music21.stream.makeNotation.makeAccidentalsInMeasureStream(score.parts[1], useKeySignature=key)
 
     score.insert(0, music21.metadata.Metadata())
     score.metadata.title = score_title

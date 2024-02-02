@@ -20,7 +20,7 @@ def eval_model(model: WavToMidiModel, song_names_df, thresholds):
                 "errors": []
             }
         })
-    for i, song in tqdm.tqdm(song_names_df.iterrows()):
+    for i, song in tqdm.tqdm(list(song_names_df.iterrows())):
         try:
             midi_file = pretty_midi.PrettyMIDI(song["midi_filename"])
             notes_target = midi_file.instruments[0].notes

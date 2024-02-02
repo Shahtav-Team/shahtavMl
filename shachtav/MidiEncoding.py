@@ -298,7 +298,7 @@ class MidiEncoding:
             onset_frame_nums, = np.nonzero(onsets_for_pitch)
             curr_frame = 0
             for onset_frame in onset_frame_nums:
-                if thresholds.min_note_length_frames >= 1 and not frames[curr_frame, pitch_id]:
+                if thresholds.min_note_length_frames >= 1 and not frames[onset_frame, pitch_id]:
                     # skip empty note
                     continue
                 if curr_frame > onset_frame:

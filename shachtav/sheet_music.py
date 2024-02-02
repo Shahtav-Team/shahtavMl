@@ -143,24 +143,32 @@ def score_from_notes(notes_split: NotesSplit, beat_info: BeatInfo,
     return score
 
 
-def get_key_windowed(score : music21.stream.Score, window_size=4, window_step=None):
-    if window_step is None:
-        window_step = window_size
-
+def get_key_windowed(score: music21.stream.Score, min_window_size=2, max_window_size=16):
     len_measures = len(score.getElementsByClass(music21.stream.Part)[0].getElementsByClass(music21.stream.Measure))
 
     keys = []
 
-    for i in range(1, len_measures + 1 - window_size, window_step):
-        measures = score.measures(i, i + window_size)
+    start_index = 1
+    end_index = 1
 
-        keys.append(
-            {
-                "measure_start": i,
-                "measure_length": window_step,
-                "key_signature": measures.analyze('key')
-            }
-        )
+    last_key = None
+
+    while end_index <= len_measures:
+        current_key = score.measures(start_index, end_index).analyze('key')
+
+        if (last_key is not None and current_key.tonalCertainty() < last_key.tonalCertainty() and
+                end_index - start_index <= max_window_size):
+            keys.append(last_key)
+            last_key = None
+            start_index = end_index
+            end_index += min(min_window_size, end_index - len_measures)
+
+        else:
+            last_key = current_key
+            end_index += 1
+
+    if last_key is not None:
+        keys.append(last_key)
 
     return keys
 

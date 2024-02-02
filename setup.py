@@ -10,7 +10,7 @@ setuptools.setup(name="shachtav_ml",
                  install_requires = [
                      "pretty_midi",
                      "music21",
-                     "git+https://github.com/CPJKU/madmom.git",
+                     "madmom~=0.17.dev0",
                      "numpy",
                      "tensorflow~=2.15.0",
                      "keras~=2.15.0",

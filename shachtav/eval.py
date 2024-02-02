@@ -43,7 +43,7 @@ def eval_model(model: WavToMidiModel, song_names_df, thresholds, require_offset_
         tp = info["notes"]["tp"]
         fp = info["notes"]["tp"]
         fn = info["notes"]["tp"]
-        info["notes"]["f1"] = (2 * tp) / (2 * tp + fp + fn)
+        info["notes"]["f1"] = (2 * tp) / (2 * tp + fp + fn + 0.0001)
 
     results_info.sort(key = lambda x: x["notes"]["f1"], reverse=True)
 

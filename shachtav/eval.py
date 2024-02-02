@@ -16,6 +16,11 @@ def eval_model(model: WavToMidiModel, song_names_df, thresholds, require_offset_
                 "fp": 0,
                 "fn": 0
             },
+            "notes_offset": {
+                "tp": 0,
+                "fp": 0,
+                "fn": 0
+            },
             "velocity": {
                 "errors": []
             }
@@ -31,7 +36,12 @@ def eval_model(model: WavToMidiModel, song_names_df, thresholds, require_offset_
                 song = midi_encoding.decode(info["threshold"], vmin = 0, vmax = 127)
                 midi = song.to_pretty_midi()
                 notes_pred = midi.instruments[0].notes
-                tp, fp, fn = compare_notes(notes_target, notes_pred, require_offset_match = require_offset_match)
+                tp, fp, fn = compare_notes(notes_target, notes_pred, require_offset_match = True)
+                info["notes_offset"]["tp"] += tp
+                info["notes_offset"]["fp"] += fp
+                info["notes_offset"]["fn"] += fn
+
+                tp, fp, fn = compare_notes(notes_target, notes_pred, require_offset_match = False)
                 info["notes"]["tp"] += tp
                 info["notes"]["fp"] += fp
                 info["notes"]["fn"] += fn
@@ -41,17 +51,25 @@ def eval_model(model: WavToMidiModel, song_names_df, thresholds, require_offset_
             print()
     for info in results_info:
         tp = info["notes"]["tp"]
-        fp = info["notes"]["tp"]
-        fn = info["notes"]["tp"]
-        info["notes"]["f1"] = (2 * tp) / (2 * tp + fp + fn + 0.0001)
+        fp = info["notes"]["fp"]
+        fn = info["notes"]["fn"]
+        info["notes"]["f1"] = (2 * tp) / (2 * tp + fp + fn)
 
-    results_info.sort(key = lambda x: x["notes"]["f1"], reverse=True)
+        tp = info["notes_offset"]["tp"]
+        fp = info["notes_offset"]["fp"]
+        fn = info["notes_offset"]["fn"]
+        info["notes_offset"]["f1"] = (2 * tp) / (2 * tp + fp + fn)
+
+    results_info.sort(key = lambda x: x["notes_offset"]["f1"], reverse=True)
 
     for info in results_info:
         print()
         print("threshold: ", info["threshold"])
-        print("f1: ", info["notes"]["f1"])
+        print("f1 note: ", info["notes"]["f1"])
+        print("f1 note with offset: ", info["notes_offset"]["f1"])
+
         print()
+    return results_info
 
 
 

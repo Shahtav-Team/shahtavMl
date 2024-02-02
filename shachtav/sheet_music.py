@@ -66,6 +66,7 @@ def notes_to_music21(notes: List[pretty_midi.Note],
         note_end = next_note_start
 
         pitches = [note.pitch for note in valid_notes]
+        pitches = list(set(pitches))
         length_quarters = (note_end - start_time) / 4  # divide by 4, since we are measuring in 16ths and need quarters.
         if len(pitches) == 0:
             to_add = music21.note.Rest(quarterLength=length_quarters)

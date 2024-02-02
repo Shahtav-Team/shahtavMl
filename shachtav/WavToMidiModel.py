@@ -13,7 +13,7 @@ from .MidiEncoding import MidiEncoding
 
 
 @keras.saving.register_keras_serializable()
-def masked_binary_crossentropy(y_true, y_pred):
+def masked_mean_square_error(y_true, y_pred):
     mask = tf.not_equal(y_true, 0)
 
     y_pred_masked = tf.boolean_mask(y_pred, mask)
@@ -23,10 +23,7 @@ def masked_binary_crossentropy(y_true, y_pred):
         return tf.constant(0., dtype = tf.float32)
     # When working with binary_crossentropy for regression on targets that are not 0 or 1,
     # make the loss relative to the lowest possible loss given the target, so that a perfect model has a loss of 0.
-    crossentropy = keras.losses.binary_crossentropy(y_true_masked, y_pred_masked)
-    crossentropy_min = keras.losses.binary_crossentropy(y_true_masked, y_true_masked)
-
-    return crossentropy - crossentropy_min
+    return keras.losses.mean_squared_error(y_true_masked, y_pred_masked)
 
 class WavToMidiModel:
     @dataclass
@@ -99,6 +96,12 @@ class WavToMidiModel:
         velocities_pred = layers.Conv1D(filters=config.midi_num_pitches, kernel_size=1, activation="sigmoid",
                                        name="velocities_out")(velocities_dropout)
 
+        pedal_acoustic = WavToMidiModel._acoustic_model(input_shape, "pedals_acoustic_model")(inputs)
+        pedal_memory = layers.Bidirectional(layers.LSTM(256, return_sequences=True), name="pedals_memory")(
+            pedal_acoustic)
+        pedal_dropout = layers.Dropout(0.5)(pedal_memory)
+        pedal_pred = layers.Conv1D(filters=1, kernel_size=1, activation="sigmoid")(pedal_dropout)
+        pedal_pred = layers.Reshape((-1,), name="pedals_out")(pedal_pred)
 
         model = keras.Model(
             inputs={
@@ -108,7 +111,8 @@ class WavToMidiModel:
                 "onsets": onsets_pred,
                 "offsets": offsets_pred,
                 "frames": frames_pred,
-                "velocities": velocities_pred
+                "velocities": velocities_pred,
+                "pedals": pedal_pred
             }
         )
 
@@ -120,7 +124,11 @@ class WavToMidiModel:
                 "onsets": keras.losses.BinaryCrossentropy(),
                 "offsets": keras.losses.BinaryCrossentropy(),
                 "frames": keras.losses.BinaryCrossentropy(),
-                "velocities": masked_binary_crossentropy
+                "velocities": masked_mean_square_error,
+                "pedals": keras.losses.BinaryCrossentropy()
+            },
+            metrics = {
+                "pedals": keras.metrics.F1Score(threshold = 0.5)
             }
         )
 

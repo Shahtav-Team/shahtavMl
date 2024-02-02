@@ -26,7 +26,7 @@ class BeatInfo:
 
 class BeatDownbeatDetector:
     def __init__(self):
-        self.rnn_processor = madmom.features.RNNDownBeatProcessor()
+        self.rnn_processor = madmom.features.RNNDownBeatProcessor(num_threads=4)
 
     def find_beats(self, filename, allowed_beats_per_bar):
         # todo make this work with an already loaded file

@@ -86,7 +86,7 @@ class Thresholds:
     pedal_on_threshold: float = 0.7
     pedal_off_threshold: float = 0.3
 
-    min_note_length_frames: float = 1
+    min_note_length_frames: float = 0
 
 
 @dataclass

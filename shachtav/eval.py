@@ -6,7 +6,7 @@ import tqdm
 from shachtav.WavToMidiModel import WavToMidiModel
 
 
-def eval_model(model: WavToMidiModel, songs_list, thresholds):
+def eval_model(model: WavToMidiModel, song_names_df, thresholds):
     results_info = []
     for threshold in thresholds:
         results_info.append({
@@ -20,7 +20,7 @@ def eval_model(model: WavToMidiModel, songs_list, thresholds):
                 "errors": []
             }
         })
-    for song in tqdm.tqdm(songs_list):
+    for i, song in tqdm.tqdm(song_names_df.iterrows()):
         try:
             midi_file = pretty_midi.PrettyMIDI(song["midi_filename"])
             notes_target = midi_file.instruments[0].notes
@@ -28,7 +28,7 @@ def eval_model(model: WavToMidiModel, songs_list, thresholds):
             midi_encoding = model.infer(audio, file_sr)
 
             for info in results_info:
-                song = midi_encoding.decode(thresholds, vmin = 0, vmax = 127)
+                song = midi_encoding.decode(info["threshold"], vmin = 0, vmax = 127)
                 midi = song.to_pretty_midi()
                 notes_pred = midi.instruments[0].notes
                 tp, fp, fn = compare_notes(notes_target, notes_pred)

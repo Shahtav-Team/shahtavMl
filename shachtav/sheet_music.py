@@ -26,9 +26,11 @@ def find_next_downbeat(db_times, time):
         # todo: figure out a proper number to put here based on the time signature.
         return db_times[-1] + 16
 
-def notes_to_music21(notes: List[pretty_midi.Note], stream: music21.stream.Stream, beat_info: BeatInfo):
+def notes_to_music21(notes: List[pretty_midi.Note],
+                     stream: music21.stream.Stream,
+                     beat_info: BeatInfo,
+                     beat_phase):
     notes = sorted(notes, key=lambda note: note.start)
-    db_times = downbeat_times(beat_info.is_downbeat)
     # group notes by the same start time
     i = 0
     notes_groups = [NoteGroup(start_time=0, notes=[])]
@@ -42,9 +44,6 @@ def notes_to_music21(notes: List[pretty_midi.Note], stream: music21.stream.Strea
     time_signature.numerator = int(beat_info.beats_per_bar)
     time_signature.denominator = 4
     stream.append(time_signature)
-    # the start of the piece is not always a downbeat.
-    # add rests at the start of the beat so that the start of each coresponds with a downbeat.
-    beat_phase = np.argmax(beat_info.is_downbeat)
     # add all the notes to the stream
     for i, group in enumerate(notes_groups):
         if len(group.notes) == 0:
@@ -64,18 +63,14 @@ def notes_to_music21(notes: List[pretty_midi.Note], stream: music21.stream.Strea
             # todo: figure out exactly what we're doing with the last note, since we can't use the next note for refrence of length.
             next_note_start = start_time + 4
 
-        next_downbeat = find_next_downbeat(db_times, start_time)
-
-        note_end = min(next_note_start, next_downbeat) # notes can't last between multiple measures.
-        note_end = max(note_end, start_time) # ensure notes don't have negative duration
+        note_end = next_note_start
 
         pitches = [note.pitch for note in valid_notes]
         length_quarters = (note_end - start_time) / 4  # divide by 4, since we are measuring in 16ths and need quarters.
         if len(pitches) == 0:
             to_add = music21.note.Rest(quarterLength=length_quarters)
-            stream.insert(start_time / 4, to_add)
+            stream.insert(start_time / 4 + beat_phase, to_add)
         else:
-            m_21_notes = [music21.note.Note(pitch=pitch, quarterLength=length_quarters) for pitch in pitches]
             to_add = music21.chord.Chord([music21.note.Note(pitch=pitch, quarterLength=length_quarters) for pitch in pitches], quarterLength=length_quarters)
             stream.insert(start_time / 4 + beat_phase, to_add)
 
@@ -85,13 +80,27 @@ def notes_to_music21(notes: List[pretty_midi.Note], stream: music21.stream.Strea
         for pitch in note.pitches:
             if pitch.accidental is not None and pitch.accidental.alter == 0:
                 pitch.accidental = None
-
     # add measures based on the given beat.
     stream.makeMeasures(inPlace=True)
-    stream.makeRests(inPlace=True)
+    # Realign to the beat
+    mes1 = stream.measure(1)
+    mes1.shiftElements(-beat_phase, startOffset=1/8)
+    mes1.paddingLeft = beat_phase
+    stream.shiftElements(-beat_phase, startOffset=1/8)
 
+    # For notes that span between multiple measures, truncate them at the end of their first measure
+    for measure in stream.getElementsByClass(music21.stream.Measure):
+        measure_length = measure.barDuration.quarterLength - measure.paddingLeft
+        for note in measure.notes:
+            if note.offset + note.quarterLength > measure_length:
+                note.quarterLength = measure_length - note.offset
+                measure.clearCache()
 
-def score_from_notes(notes_split: NotesSplit, beat_info: BeatInfo):
+    stream.makeRests(inPlace=True, timeRangeFromBarDuration=True)
+
+def score_from_notes(notes_split: NotesSplit, beat_info: BeatInfo,
+                     score_title="Title",
+                     score_composer="Composer"):
     """
     Produces a music21 score object from info from other models.
     Args:
@@ -104,14 +113,19 @@ def score_from_notes(notes_split: NotesSplit, beat_info: BeatInfo):
     """
     if notes_split is None:
         raise ValueError("notes_split must not be None")
+
+    # the start of the piece is not always a downbeat.
+    # Shift the notes so they align properly with the downbeats.
+    beat_phase = np.argmax(beat_info.is_downbeat)
+
     score = music21.stream.Score()
     treble_part = music21.stream.Part(id="treble")
     treble_part.append(music21.clef.TrebleClef())
-    notes_to_music21(notes_split.treble_notes, treble_part, beat_info)
+    notes_to_music21(notes_split.treble_notes, treble_part, beat_info, beat_phase)
 
     bass_part = music21.stream.Part(id="bass")
     bass_part.append(music21.clef.BassClef())
-    notes_to_music21(notes_split.bass_notes, bass_part, beat_info)
+    notes_to_music21(notes_split.bass_notes, bass_part, beat_info, beat_phase)
 
     score.insert(0, treble_part)
     score.insert(0, bass_part)
@@ -122,6 +136,8 @@ def score_from_notes(notes_split: NotesSplit, beat_info: BeatInfo):
     music21.stream.makeNotation.makeAccidentalsInMeasureStream(score.parts[0], useKeySignature=key)
     music21.stream.makeNotation.makeAccidentalsInMeasureStream(score.parts[1], useKeySignature=key)
 
-    score.show("text")
+    # score.insert(0, music21.metadata.Metadata())
+    # score.metadata.title = score_title
+    # score.metadata.composer = score_composer
 
     return score

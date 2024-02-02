@@ -9,7 +9,7 @@ import pretty_midi
 from matplotlib import pyplot as plt
 from pretty_midi import PrettyMIDI
 
-from . import config
+from shachtav import config
 
 SUSTAIN_NO = 64
 
@@ -267,7 +267,7 @@ class MidiEncoding:
 
         return midi_copy
 
-    def decode(self, thresholds: Thresholds = None, vmin=20, vmax=90) -> Song:
+    def decode(self, thresholds: Thresholds = None, vmin=0, vmax=127) -> Song:
         if thresholds is None:
             thresholds = Thresholds()
 

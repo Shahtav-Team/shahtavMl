@@ -5,8 +5,8 @@ import music21
 import numpy as np
 import pretty_midi
 
-from shachtav.BeatDownbeatDetector import BeatInfo
-from shachtav.VoiceSplitting import NotesSplit
+from shahtav.BeatDownbeatDetector import BeatInfo
+from shahtav.VoiceSplitting import NotesSplit
 
 
 @dataclass
@@ -117,7 +117,11 @@ def score_from_notes(notes_split: NotesSplit, beat_info: BeatInfo,
 
     # the start of the piece is not always a downbeat.
     # Shift the notes so they align properly with the downbeats.
-    beat_phase = np.argmax(beat_info.is_downbeat)
+    first_downbeat_beat = np.argmax(beat_info.is_downbeat)
+    if first_downbeat_beat != 0:
+        beat_phase = beat_info.beats_per_bar - first_downbeat_beat
+    else:
+        beat_phase = 0
 
     score = music21.stream.Score()
     treble_part = music21.stream.Part(id="treble")

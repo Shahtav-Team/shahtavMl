@@ -3,9 +3,9 @@ import music21
 import numpy as np
 
 import sheet_music
-from shachtav import WavToMidiModel
-from shachtav.BeatDownbeatDetector import BeatDownbeatDetector
-from shachtav.VoiceSplitting import ClefSplitModel
+from shahtav import WavToMidiModel
+from shahtav.BeatDownbeatDetector import BeatDownbeatDetector
+from shahtav.VoiceSplitting import ClefSplitModel
 
 import sample_song
 

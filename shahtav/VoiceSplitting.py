@@ -13,6 +13,40 @@ import copy
 import matplotlib.pyplot as plt
 
 
+@keras.saving.register_keras_serializable()
+def masked_binary_crossentropy(y_true, y_pred):
+  crossentropy = tf.nn.sigmoid_cross_entropy_with_logits(y_true, y_pred)
+  mask = (y_true == 0) | (y_true == 1)
+  mask_float = tf.cast(mask, y_pred.dtype)
+
+  loss = tf.reduce_sum(mask_float * crossentropy) / tf.reduce_sum(mask_float)
+  return loss
+
+@keras.saving.register_keras_serializable()
+class MaskedBinaryAccuracy(keras.metrics.Metric):
+  def __init__(self, name='masked_binary_accuracy', threshold = 0, **kwargs):
+    super().__init__(name=name, **kwargs)
+    self.threshold = threshold
+    self.num_correct = self.add_weight(name = 'correct', initializer='zeros', dtype = np.int64)
+    self.total = self.add_weight(name = 'total', initializer='zeros', dtype = np.int64)
+
+  def update_state(self, y_true, y_pred, sample_weight=None):
+    mask = (y_true == 0) | (y_true == 1)
+    mask_int = tf.cast(mask, tf.int64)
+    y_pred = y_pred > self.threshold
+    y_true = tf.cast(y_true, tf.bool)
+
+    is_correct = y_true == y_pred
+    is_correct = tf.cast(is_correct, tf.int64)
+    self.num_correct.assign_add(tf.reduce_sum(is_correct * mask_int))
+    self.total.assign_add(tf.reduce_sum(mask_int))
+
+  def result(self):
+    return self.num_correct / self.total
+
+  def reset_state(self):
+    self.num_correct.assign(0)
+    self.total.assign(0)
 class Clef:
   bass = 0
   treble = 1
@@ -77,7 +111,7 @@ def quantized_midi_to_onsets(midi, length):
 class ClefSplitModel:
     @staticmethod
     def load(model_path):
-        model = keras.models.load_model(model_path, compile=False)
+        model = keras.models.load_model(model_path)
         return ClefSplitModel(model)
 
     def __init__(self, model):

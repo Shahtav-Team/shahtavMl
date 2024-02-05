@@ -2,12 +2,12 @@ import setuptools
 
 print(setuptools.find_packages())
 
-setuptools.setup(name="shachtav_ml",
+setuptools.setup(name="shahtav_ml",
                  version="0.2.0",
                  author="Guy Knaan",
                  author_email="guyknaan@gmail.com",
                  packages=setuptools.find_packages(),
-                 install_requires = [
+                 install_requires=[
                      "pretty_midi",
                      "music21",
                      "madmom~=0.17.dev0",

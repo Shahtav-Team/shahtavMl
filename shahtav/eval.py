@@ -3,7 +3,7 @@ import pretty_midi
 import tensorflow as tf
 import tqdm
 
-from shachtav.WavToMidiModel import WavToMidiModel
+from shahtav.WavToMidiModel import WavToMidiModel
 
 
 def eval_model(model: WavToMidiModel, song_names_df, thresholds, require_offset_match = True):

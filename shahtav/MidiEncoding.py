@@ -9,7 +9,7 @@ import pretty_midi
 from matplotlib import pyplot as plt
 from pretty_midi import PrettyMIDI
 
-from shachtav import config
+from shahtav import config
 
 SUSTAIN_NO = 64
 

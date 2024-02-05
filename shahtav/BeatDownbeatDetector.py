@@ -3,16 +3,17 @@ import collections
 
 import librosa
 import numpy as np
+import os
+
+from dataclasses import dataclass
+
+import madmom
 
 collections.Iterable = collections.abc.Iterable
 collections.Mapping = collections.abc.Mapping
 collections.MutableSet = collections.abc.MutableSet
 collections.MutableMapping = collections.abc.MutableMapping
 collections.MutableSequence = collections.abc.MutableSequence
-
-from dataclasses import dataclass
-
-import madmom
 
 int_16_max = 32767
 madmom_sr = 44100
@@ -26,7 +27,8 @@ class BeatInfo:
 
 class BeatDownbeatDetector:
     def __init__(self):
-        self.rnn_processor = madmom.features.RNNDownBeatProcessor(num_threads=4)
+
+        self.rnn_processor = madmom.features.RNNDownBeatProcessor(num_threads=os.cpu_count())
 
     def find_beats(self, filename, allowed_beats_per_bar):
         # todo make this work with an already loaded file
